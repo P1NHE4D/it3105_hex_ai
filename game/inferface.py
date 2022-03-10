@@ -35,5 +35,13 @@ class Game(ABC):
         pass
 
     @abstractmethod
+    def player_to_move(self):
+        """
+
+        :return: which player's turn it is. 0 or 1
+        """
+        return self.current_player
+
+    @abstractmethod
     def visualize(self):
         pass
