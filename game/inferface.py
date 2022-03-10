@@ -4,6 +4,9 @@ from copy import deepcopy
 
 class Game(ABC):
 
+    def __init__(self, current_player=0):
+        self.current_player = current_player
+
     def create_copy(self):
         return deepcopy(self)
 
