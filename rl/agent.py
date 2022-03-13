@@ -51,8 +51,10 @@ class Agent:
                 " | Average loss: {:.2f}".format(np.mean(history.losses))
             )
 
-    def propose_action(self, state, epsilon=0):
-        pass
+    def propose_action(self, state, actions):
+        distribution = self.anet.predict([state])[0]
+        action = actions[np.argmax(distribution)]
+        return action
 
 
 class LossHistory(Callback):
