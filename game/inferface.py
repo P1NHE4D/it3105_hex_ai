@@ -28,7 +28,7 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def get_child_state(self):
+    def get_child_state(self, action):
         """
         :return: state_encoding, actions
         """
