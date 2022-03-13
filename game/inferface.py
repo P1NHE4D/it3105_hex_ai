@@ -14,7 +14,7 @@ class Game(ABC):
     def init_game(self):
         """
 
-        :return: state_encoding, actions
+        :return: state_encoding
         """
         pass
 
@@ -23,15 +23,22 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def get_state_reward(self):
-        # blablabla 1 if player 1 win, -1 if other guy wins, 0 otherwise (draw)
+    def get_actions(self):
+        """
+        :return: possible actions
+        """
         pass
 
     @abstractmethod
     def get_child_state(self, action):
         """
-        :return: state_encoding, actions
+        :return: state_encoding
         """
+        pass
+
+    @abstractmethod
+    def get_state_reward(self):
+        # blablabla 1 if player 1 win, -1 if other guy wins, 0 otherwise (draw)
         pass
 
     @abstractmethod

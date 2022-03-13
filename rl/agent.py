@@ -14,41 +14,43 @@ class Agent:
 
     def __init__(
             self,
-            anet_layer_nodes,
-            episodes=50,
-            num_sim=50,
-            save_interval=10,
-            anet_learning_rate=0.01,
-            anet_epochs=10,
-            anet_weight_file=None,
-            anet_file_path=f"{ROOT_DIR}/rl/models"
+            game: Game,
+            config=None
     ):
-        self.episodes = episodes
-        self.save_interval = save_interval
-        self.anet_epochs = anet_epochs
-        self.anet_file_path = anet_file_path
-        self.anet = ANET(anet_layer_nodes, anet_learning_rate, anet_weight_file)
-        self.weight_file = anet_weight_file
-        self.num_sim = num_sim
+        if config is None:
+            config = {}
+        anet_config = config.get("anet", {})
+        self.episodes = config.get("episodes", 50)
+        self.save_interval = config.get("save_interval", 10)
+        self.num_sim = config.get("num_sim", 50)
+        self.epochs = anet_config.get("epochs", 10)
+        self.file_path = anet_config.get("file_path", f"{ROOT_DIR}/rl/models")
+        self.game = game
+        self.anet = ANET(
+            anet_config.get("hidden_layer_nodes", [32]),
+            len(game.get_actions()),
+            anet_config.get("learning_rate", 0.01),
+            anet_config.get("weight_file", None)
+        )
         self.mcts_tree = MCTS()
 
-    def train(self, game: Game):
+    def train(self):
         rbuf_x = []
         rbuf_y = []
         progress = tqdm(range(self.episodes), desc="Episode")
         for episode in progress:
-            state, actions = game.init_game()
-            while not game.is_current_state_terminal():
-                distribution = self.mcts_tree.simulate(game=game, num_sim=self.num_sim)
+            state, actions = self.game.init_game()
+            while not self.game.is_current_state_terminal():
+                distribution = self.mcts_tree.simulate(game=self.game, num_sim=self.num_sim)
                 rbuf_x.append(state)
                 rbuf_y.append(distribution)
                 action = actions[np.argmax(distribution)]
-                state, actions = game.get_child_state(action)
+                state, actions = self.game.get_child_state(action)
                 self.mcts_tree.retain_subtree(action)
             history = LossHistory()
-            self.anet.fit(x=rbuf_x, y=rbuf_y, epochs=self.anet_epochs, verbose=3, callbacks=[history])
+            self.anet.fit(x=rbuf_x, y=rbuf_y, epochs=self.epochs, verbose=3, callbacks=[history])
             if episode % self.save_interval == 0:
-                self.anet.save_weights(filepath=f"{self.anet_file_path}/anet_episode_{episode}")
+                self.anet.save_weights(filepath=f"{self.file_path}/anet_episode_{episode}")
             progress.set_description(
                 "Batch loss: {:.2f}".format(history.losses[-1]) +
                 " | Average loss: {:.2f}".format(np.mean(history.losses))
@@ -75,10 +77,10 @@ class LossHistory(Callback):
 
 class ANET(Model):
 
-    def __init__(self, layer_nodes, learning_rate, weight_file, *args, **kwargs):
+    def __init__(self, hidden_layer_nodes, output_nodes, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        layers = [Dense(nodes, activation=leaky_relu) for nodes in layer_nodes[:-1]]
-        layers.append(Dense(layer_nodes[-1], activation=sigmoid))
+        layers = [Dense(nodes, activation=leaky_relu) for nodes in hidden_layer_nodes]
+        layers.append(Dense(output_nodes, activation=sigmoid))
         self.model = Sequential(layers)
         self.compile(
             optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
