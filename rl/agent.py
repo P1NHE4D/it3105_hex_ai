@@ -7,6 +7,7 @@ from tensorflow import keras
 from tqdm import tqdm
 from game.inferface import Game
 import numpy as np
+from main import ROOT_DIR
 
 
 class Agent:
@@ -15,13 +16,17 @@ class Agent:
             self,
             anet_layer_nodes,
             episodes=50,
+            num_sim=50,
             save_interval=10,
             anet_learning_rate=0.01,
+            anet_epochs=10,
             anet_weight_file=None,
-            num_sim=50
+            anet_file_path=f"{ROOT_DIR}/rl/models"
     ):
         self.episodes = episodes
         self.save_interval = save_interval
+        self.anet_epochs = anet_epochs
+        self.anet_file_path = anet_file_path
         self.anet = ANET(anet_layer_nodes, anet_learning_rate, anet_weight_file)
         self.weight_file = anet_weight_file
         self.num_sim = num_sim
@@ -40,12 +45,10 @@ class Agent:
                 action = actions[np.argmax(distribution)]
                 state, actions = game.get_child_state(action)
                 self.mcts_tree.retain_subtree(action)
-            # TODO: set batch size and number of epochs
             history = LossHistory()
-            self.anet.fit(x=rbuf_x, y=rbuf_y, verbose=3, callbacks=[history])
+            self.anet.fit(x=rbuf_x, y=rbuf_y, epochs=self.anet_epochs, verbose=3, callbacks=[history])
             if episode % self.save_interval == 0:
-                # TODO: add parameter for filepath
-                self.anet.save_weights(filepath=f"models/anet_episode_{episode}")
+                self.anet.save_weights(filepath=f"{self.anet_file_path}/anet_episode_{episode}")
             progress.set_description(
                 "Batch loss: {:.2f}".format(history.losses[-1]) +
                 " | Average loss: {:.2f}".format(np.mean(history.losses))
@@ -81,13 +84,39 @@ class ANET(Model):
             optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
             loss=keras.losses.binary_crossentropy
         )
+        self.model_trained = False
         try:
             self.load_weights(weight_file)
+            self.model_trained = True
         except:
             print("Unable to load weight file")
 
     def call(self, inputs, training=None, mask=None):
         return self.model(inputs)
+
+    def predict(
+            self,
+            x,
+            batch_size=None,
+            verbose=0,
+            steps=None,
+            callbacks=None,
+            max_queue_size=10,
+            workers=1,
+            use_multiprocessing=False
+    ):
+        if not self.model_trained:
+            raise Exception("Model needs to be trained first")
+        super().predict(
+            x,
+            batch_size,
+            verbose,
+            steps,
+            callbacks,
+            max_queue_size,
+            workers,
+            use_multiprocessing
+        )
 
     def get_config(self):
         super().get_config()
