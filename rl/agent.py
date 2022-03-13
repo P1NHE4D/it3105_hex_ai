@@ -24,6 +24,7 @@ class Agent:
         self.save_interval = config.get("save_interval", 10)
         self.num_sim = config.get("num_sim", 50)
         self.epochs = anet_config.get("epochs", 10)
+        self.batch_size = anet_config.get("batch_size", 100)
         self.file_path = anet_config.get("file_path", f"{ROOT_DIR}/rl/models")
         self.game = game
         self.anet = ANET(
@@ -48,7 +49,7 @@ class Agent:
                 state, actions = self.game.get_child_state(action)
                 self.mcts_tree.retain_subtree(action)
             history = LossHistory()
-            self.anet.fit(x=rbuf_x, y=rbuf_y, epochs=self.epochs, verbose=3, callbacks=[history])
+            self.anet.fit(x=rbuf_x, y=rbuf_y, batch_size=self.batch_size, epochs=self.epochs, verbose=3, callbacks=[history])
             if episode % self.save_interval == 0:
                 self.anet.save_weights(filepath=f"{self.file_path}/anet_episode_{episode}")
             progress.set_description(
