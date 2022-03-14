@@ -11,10 +11,10 @@ class Nim(Game):
         stone wins.
 
         Representations:
-        * State representation is a 'stones' length vector containing for the i'th stone 1 if the stone has been taken,
+        * State representation is a 'stones' length tuple containing for the i'th stone 1 if the stone has been taken,
           and 0 otherwise. The stones are taken in the order of left to right. For example, a 'stones=4' game would
           start. as [1 1 1 1], and become [0 1 1 1] after a player takes one stone.
-        * Action representation is a 'max_take' length OHE vector containing a 1 in the i'th position, where i+1 is the
+        * Action representation is a 'max_take' length OHE tuple containing a 1 in the i'th position, where i+1 is the
           number of stones a player would like to take. For example, a 'max_take=3' game where there are 2 stones left
           would afford the actions: [1 0 0] or [0 1 0], corresponding to "take 1 stone" or "take 2 stones" respectively
 
@@ -30,26 +30,25 @@ class Nim(Game):
         self.max_take = max_take
 
         # to be set upon first init_game (TODO: why do we have an init game function?)
-        self.current_state = None
+        self.remaining_stones = None
+
+    def encode_state(self):
+        part_player = (float(self.player_to_move()),)
+        part_taken = (0.0,) * (self.stones - self.remaining_stones)
+        part_untaken = (1.0,) * self.remaining_stones
+        return part_player + part_taken + part_untaken
 
     def init_game(self):
-        self.current_state = (1.0,) * self.stones
-        return self.current_state
+        self.remaining_stones = self.stones
+        return self.encode_state()
 
     def is_current_state_terminal(self):
-        return all(stone == 0.0 for stone in self.current_state)
-
-    def first_remaining_stone_in_state_pos(self):
-        # kinda roundabout way of finding position (right of) last 0. Sue me
-        return np.searchsorted(self.current_state, 0, side='right')
+        return self.remaining_stones == 0
 
     def get_actions(self):
-        # find stones remaining
-        remaining = self.stones - self.first_remaining_stone_in_state_pos()
-
         actions = []
         for i in range(self.max_take):
-            if i+1 > remaining:
+            if i+1 > self.remaining_stones:
                 # this action (and all actions greater than it) use more stones than are remaining, so break
                 break
             actions.append(tuple(1.0 if j == i else 0.0 for j in range(self.max_take)))
@@ -58,17 +57,12 @@ class Nim(Game):
 
     def get_child_state(self, action):
         took = np.argmax(action)+1
-
-        mark_0_from = self.first_remaining_stone_in_state_pos()
-        mark_0_to = mark_0_from + took
-
-        next_state = self.current_state[:mark_0_from] + (0.0,) * took + self.current_state[mark_0_to:]
+        self.remaining_stones -= took
 
         # TODO: should we not advance player if we're in a terminal state?
         self.advance_player()
 
-        self.current_state = next_state
-        return self.current_state
+        return self.encode_state()
 
     def advance_player(self):
         self.current_player = (self.current_player + 1) % 2
@@ -97,7 +91,7 @@ class Nim(Game):
 
     def visualize(self):
         # extremly bare-bones for now...
-        print(f"player to move: {self.player_to_move()}, remaining stones: {self.stones - self.first_remaining_stone_in_state_pos()}")
+        print(f"player to move: {self.player_to_move()}, remaining stones: {self.remaining_stones}")
 
 
 if __name__ == '__main__':
