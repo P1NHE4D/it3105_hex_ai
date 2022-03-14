@@ -32,6 +32,9 @@ class Nim(Game):
         # to be set upon first init_game (TODO: why do we have an init game function?)
         self.remaining_stones = None
 
+    def get_current_state(self):
+        return self.encode_state()
+
     def encode_state(self):
         part_player = (float(self.player_to_move()),)
         part_taken = (0.0,) * (self.stones - self.remaining_stones)

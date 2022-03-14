@@ -20,6 +20,10 @@ class Game(ABC):
         pass
 
     @abstractmethod
+    def get_current_state(self):
+        pass
+
+    @abstractmethod
     def is_current_state_terminal(self):
         pass
 
