@@ -1,6 +1,6 @@
 import numpy as np
 
-from game.inferface import Game
+from game.interface import Game
 
 
 class Nim(Game):
