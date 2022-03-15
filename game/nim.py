@@ -72,9 +72,8 @@ class Nim(Game):
 
     def get_state_reward(self):
         if not self.is_current_state_terminal():
-            # reward ony dealt at terminal state
-            # alternatively could treat this as a reward of 0, but for now I'll reserve 0 to mean "draw"
-            return None
+            # if the game is not over, no one has won
+            return 0.0
 
         # if we're in a terminal state, that means the last player that made a move made the winning move (we have to
         # advance the current player to move because the game automatically moves on to the next player even in a
