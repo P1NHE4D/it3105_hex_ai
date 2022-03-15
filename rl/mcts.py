@@ -5,7 +5,7 @@ from pprint import pprint
 
 import numpy as np
 
-import game.interface
+from game.interface import Game
 
 from game.nim import Nim
 
@@ -43,7 +43,7 @@ class MCTSNode:
         # TODO I don't think we should be moving randomly here..
         return actions[np.random.randint(len(actions))]
 
-    def rollout(self, game: game.interface):
+    def rollout(self, game: Game):
         """
         Perform rollout simulation from this node, which means digging into state space until reaching a terminal
         node, and returning the reward of that node
@@ -74,7 +74,7 @@ class MCTSNode:
     def describe(self):
         pprint(vars(self))
 
-    def expand(self, game : game.interface):
+    def expand(self, game: Game):
         # it's critical that we expand in the order of left to right here, so that the children lie in the same order
         # as the 'actions' param given in __init__
         action = self.untried_actions.pop(0)
@@ -128,7 +128,7 @@ class MCTS:
     def __init__(self):
         self.root : MCTSNode = None
 
-    def simulate(self, game : game.interface, num_sim):
+    def simulate(self, game: Game, num_sim):
         """
         Simulates
 
@@ -157,7 +157,7 @@ class MCTS:
 
         return self.root.action_distribution()
 
-    def tree_search(self, game : game.interface):
+    def tree_search(self, game: Game):
         node = self.root
         while not node.terminal_node():
             if not node.is_fully_expanded():
