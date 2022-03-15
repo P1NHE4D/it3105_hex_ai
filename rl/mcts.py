@@ -2,11 +2,8 @@
 I admit I had a look at this source for inspiration: https://ai-boson.github.io/mcts/
 """
 from pprint import pprint
-
 import numpy as np
-
 from game.interface import Game
-
 from game.nim import Nim
 
 class MCTSNode:
