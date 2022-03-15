@@ -162,11 +162,17 @@ class MCTS:
 
     def retain_subtree(self, action):
         """
+        Retain chosen state but discard rest of tree
 
         :param action: action chosen from root
         """
-        # retain chosen state but discard rest of tree
-        pass
+        for child in self.root.children:
+            if child.incoming_edge_action == action:
+                # FOR NOW just let root be subtree (not discaring rest of tree!)
+                # TODO:
+                self.root = child
+                return
+        raise ValueError('passed action does not correspond to a child of root')
 
 if __name__ == '__main__':
     # if ran directly, run test case
