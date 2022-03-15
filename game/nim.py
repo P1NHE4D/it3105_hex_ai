@@ -35,6 +35,12 @@ class Nim(Game):
     def get_current_state(self):
         return self.encode_state()
 
+    def get_action_length(self):
+        """
+        :return: number of cells used for OHE of single action
+        """
+        return self.max_take
+
     def encode_state(self):
         part_player = (float(self.player_to_move()),)
         part_taken = (0.0,) * (self.stones - self.remaining_stones)

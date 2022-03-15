@@ -24,6 +24,10 @@ class Game(ABC):
         pass
 
     @abstractmethod
+    def get_action_length(self):
+        pass
+
+    @abstractmethod
     def is_current_state_terminal(self):
         pass
 

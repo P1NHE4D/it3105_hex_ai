@@ -7,7 +7,7 @@ from game.interface import Game
 from game.nim import Nim
 
 class MCTSNode:
-    def __init__(self, parent_state, edge_action, state, player, actions):
+    def __init__(self, parent_state, edge_action, state, player, legal_actions, action_length):
         """
         A MCTSNode represents a single node in the tree of MCTS, as well as the edge that leads to it (if any). The
         semantics are: "We were in 'parent_state', then 'edge_action' was taken, now I am in 'state' as 'player' and can
@@ -17,12 +17,14 @@ class MCTSNode:
         :param edge_action: action that was taken from parent state to reach this state
         :param state: state this node corresponds to
         :param player: player to move
-        :param actions: actions possible from node. Notice that len(actions) == 0 means the node is terminal
+        :param legal_actions: actions possible from node. Notice that len(actions) == 0 means the node is terminal
+        :param action_length: length of single action representation. needed when building action distribution
         """
         self.state = state
         self.parent_state = parent_state
         self.incoming_edge_action = edge_action
         self.player = player
+        self.action_length = action_length
 
         # number of times node has been visited during tree search
         self.node_visit_count = 0
@@ -34,7 +36,7 @@ class MCTSNode:
 
         # children reachable from node through actions
         self.children : list[MCTSNode] = []
-        self.untried_actions = actions
+        self.untried_actions = legal_actions
 
     def rollout_policy(self, actions):
         # TODO I don't think we should be moving randomly here..
@@ -81,27 +83,19 @@ class MCTSNode:
             edge_action=action,
             state=child_state,
             player=game.current_player,
-            actions=game.get_actions(),
+            legal_actions=game.get_actions(),
+            action_length=game.get_action_length(),
         )
         self.children.append(child_node)
         return child_node
 
     def action_distribution(self):
-        edge_visit_counts = []
+        action_dist = np.zeros((self.action_length,))
+
         for child in self.children:
-            edge_visit_counts.append(child.incoming_edge_visit_count)
+            action_dist += np.array(child.incoming_edge_action) * child.incoming_edge_visit_count
 
-        # add 0s for untried actions as well (children we never got to see)
-        for _ in self.untried_actions:
-            edge_visit_counts.append(0)
-
-        total = sum(edge_visit_counts)
-
-        distribution = []
-        for edge_visit_count in edge_visit_counts:
-            distribution.append(edge_visit_count / total)
-
-        return distribution
+        return action_dist / np.sum(action_dist)
 
     def best_child(self, c=1.0):
         exploration_bonuses = []
@@ -141,7 +135,8 @@ class MCTS:
                 edge_action=None,
                 state=game.get_current_state(),
                 player=game.player_to_move(),
-                actions=game.get_actions(),
+                legal_actions=game.get_actions(),
+                action_length=game.get_action_length(),
             )
 
         # simulate from current state of the game and return distribution over all possible actions
@@ -201,7 +196,7 @@ if __name__ == '__main__':
     if True:
         while True:
             game = Nim(
-                stones=14,
+                stones=2,
                 max_take=3,
             )
             game.init_game()
