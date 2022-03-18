@@ -4,8 +4,9 @@ from copy import deepcopy
 
 class Game(ABC):
 
-    def __init__(self, current_player=0):
+    def __init__(self, current_player=0, max_players=2):
         self.current_player = current_player
+        self.max_players = max_players
 
     def create_copy(self):
         return deepcopy(self)
@@ -42,6 +43,9 @@ class Game(ABC):
         pass
 
     @abstractmethod
+    def visualize(self):
+        pass
+
     def player_to_move(self):
         """
 
@@ -49,6 +53,5 @@ class Game(ABC):
         """
         return self.current_player
 
-    @abstractmethod
-    def visualize(self):
-        pass
+    def next_player(self):
+        self.current_player = (self.current_player + 1) % self.max_players
