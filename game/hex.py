@@ -1,5 +1,7 @@
 from enum import Enum
 
+import networkx
+
 from game.inferface import Game
 import numpy as np
 import networkx as nx
@@ -137,7 +139,8 @@ class Hex(Game):
             visited.add((row, col))
             for neighbour in self.board[row, col].neighbours:
                 neighbour_row, neighbour_col = neighbour
-                if self.board[neighbour_row, neighbour_col].state == cell_val and (neighbour_row, neighbour_col) not in visited:
+                if self.board[neighbour_row, neighbour_col].state == cell_val and (
+                neighbour_row, neighbour_col) not in visited:
                     lines = lines.union(connected_lines(neighbour_row, neighbour_col, visited))
 
             return lines
@@ -158,8 +161,6 @@ class Hex(Game):
         return 0
 
     def visualize(self):
-
-        # TODO: layout needs to be set to a fixed position. Remove labels once this is done.
         g = nx.Graph()
         for row, hex_row in enumerate(self.board):
             for col, node in enumerate(hex_row):
@@ -171,6 +172,10 @@ class Hex(Game):
                 elif node.state == HexCellState.PLAYER_TWO:
                     node_color = "black"
                 g.add_node("node_{}_{}".format(row, col), color=node_color, edge_color=node_edge_color)
+
+        # cannot be integrated into the previous loop as this will mix up the order of the nodes
+        for row, hex_row in enumerate(self.board):
+            for col, node in enumerate(hex_row):
                 for neighbour in node.neighbours:
                     edge_color = "black"
                     edge_weight = 1
@@ -187,8 +192,47 @@ class Hex(Game):
         node_edge_colors = nx.get_node_attributes(g, 'edge_color').values()
         edge_colors = nx.get_edge_attributes(g, 'color').values()
         edge_weights = nx.get_edge_attributes(g, 'weight').values()
-        nx.draw(g, edge_color=edge_colors, edgecolors=list(node_edge_colors), width=list(edge_weights), node_color=node_colors, with_labels=True)
+        nx.draw(
+            g,
+            edge_color=edge_colors,
+            width=list(edge_weights),
+            edgecolors=list(node_edge_colors),
+            node_color=node_colors,
+            pos=diamond_layout(g)
+        )
         plt.show()
+
+
+def diamond_layout(graph: networkx.Graph):
+    pos = {}
+    init_x, init_y = 0.5, 1
+    x, y = init_x, init_y
+    count = 0
+    for node in graph.nodes:
+        pos[node] = (x, y)
+        y -= 0.1
+        x += 0.1
+        count += 1
+        if count >= np.sqrt(len(graph.nodes)):
+            count = 0
+            init_y -= 0.1
+            init_x -= 0.1
+            x, y = init_x, init_y
+    return pos
+
+
+def array_layout(graph: networkx.Graph):
+    pos = {}
+    step = 1 / np.sqrt(len(graph.nodes))
+    x_pos = 0
+    y_pos = 1
+    for node in graph.nodes:
+        pos[node] = (x_pos, y_pos)
+        x_pos += step
+        if x_pos >= 1:
+            y_pos -= step
+            x_pos = 0
+    return pos
 
 
 def construct_hex_board(board_size):
