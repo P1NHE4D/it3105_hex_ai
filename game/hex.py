@@ -1,7 +1,4 @@
 from enum import Enum
-
-import networkx
-
 from game.inferface import Game
 import numpy as np
 import networkx as nx
@@ -203,7 +200,7 @@ class Hex(Game):
         plt.show()
 
 
-def diamond_layout(graph: networkx.Graph):
+def diamond_layout(graph: nx.Graph):
     pos = {}
     init_x, init_y = 0.5, 1
     x, y = init_x, init_y
@@ -221,7 +218,7 @@ def diamond_layout(graph: networkx.Graph):
     return pos
 
 
-def array_layout(graph: networkx.Graph):
+def array_layout(graph: nx.Graph):
     pos = {}
     step = 1 / np.sqrt(len(graph.nodes))
     x_pos = 0
