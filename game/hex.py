@@ -160,22 +160,31 @@ class Hex(Game):
     def visualize(self):
 
         # TODO: layout needs to be set to a fixed position. Remove labels once this is done.
-        # TODO: highlight connections between adjacent pieces belonging to the same player
         g = nx.Graph()
-        node_colors = []
         for row, hex_row in enumerate(self.board):
             for col, node in enumerate(hex_row):
-                g.add_node("node_{}_{}".format(row, col))
-                node_colors.append(
-                    "red" if node.state == HexCellState.PLAYER_ONE else "black" if node.state == HexCellState.PLAYER_TWO else "white")
-
-        # edges cannot be moved in the upper loop as this will mix up the order of the nodes and cause
-        # issues with the color map
-        for row, hex_row in enumerate(self.board):
-            for col, node in enumerate(hex_row):
+                node_color = "white"
+                if node.state == HexCellState.PLAYER_ONE:
+                    node_color = "red"
+                elif node.state == HexCellState.PLAYER_TWO:
+                    node_color = "black"
+                g.add_node("node_{}_{}".format(row, col), color=node_color)
                 for neighbour in node.neighbours:
-                    g.add_edge("node_{}_{}".format(row, col), "node_{}_{}".format(neighbour[0], neighbour[1]))
-        nx.draw(g, edgecolors="black", node_color=node_colors, with_labels=True)
+                    edge_color = "black"
+                    edge_weight = 1
+                    if node.state == self.board[neighbour].state:
+                        if node.state == HexCellState.PLAYER_ONE:
+                            edge_color = "red"
+                            edge_weight = 4
+                        elif node.state == HexCellState.PLAYER_TWO:
+                            edge_weight = 4
+                    g.add_edge("node_{}_{}".format(row, col), "node_{}_{}".format(*neighbour), weight=edge_weight,
+                               color=edge_color)
+
+        node_colors = nx.get_node_attributes(g, 'color').values()
+        edge_colors = nx.get_edge_attributes(g, 'color').values()
+        edge_weights = nx.get_edge_attributes(g, 'weight').values()
+        nx.draw(g, edge_color=edge_colors, edgecolors="black", width=list(edge_weights), node_color=node_colors, with_labels=True)
         plt.show()
 
 
