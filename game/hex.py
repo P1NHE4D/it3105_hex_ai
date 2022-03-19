@@ -164,11 +164,13 @@ class Hex(Game):
         for row, hex_row in enumerate(self.board):
             for col, node in enumerate(hex_row):
                 node_color = "white"
+                node_edge_color = "black"
                 if node.state == HexCellState.PLAYER_ONE:
                     node_color = "red"
+                    node_edge_color = "red"
                 elif node.state == HexCellState.PLAYER_TWO:
                     node_color = "black"
-                g.add_node("node_{}_{}".format(row, col), color=node_color)
+                g.add_node("node_{}_{}".format(row, col), color=node_color, edge_color=node_edge_color)
                 for neighbour in node.neighbours:
                     edge_color = "black"
                     edge_weight = 1
@@ -182,9 +184,10 @@ class Hex(Game):
                                color=edge_color)
 
         node_colors = nx.get_node_attributes(g, 'color').values()
+        node_edge_colors = nx.get_node_attributes(g, 'edge_color').values()
         edge_colors = nx.get_edge_attributes(g, 'color').values()
         edge_weights = nx.get_edge_attributes(g, 'weight').values()
-        nx.draw(g, edge_color=edge_colors, edgecolors="black", width=list(edge_weights), node_color=node_colors, with_labels=True)
+        nx.draw(g, edge_color=edge_colors, edgecolors=list(node_edge_colors), width=list(edge_weights), node_color=node_colors, with_labels=True)
         plt.show()
 
 
