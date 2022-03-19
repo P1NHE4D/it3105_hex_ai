@@ -152,15 +152,40 @@ class ANET(Model):
         super().get_config()
 
 if __name__ == '__main__':
-    nim_config = {'stones': 13, 'max_take': 3}
+    nim_config = {'stones': 5, 'max_take': 3}
     game = Nim(**nim_config)
     a = Agent(game, config={
-        'num_sim': 500,
+        'num_sim': 1000,
         'anet': {
             'weight_file': 'rl/models/anet_episode_40',
         }
     })
-    #a.train()
+    a.train()
+
+    wins = 0
+    losses = 0
+    while True:
+        game = Nim(**nim_config)
+        state = game.init_game()
+        while True:
+            chosen = a.propose_action(state, game.get_actions())
+            state = game.get_child_state(chosen)
+            if game.is_current_state_terminal():
+                break
+            possible_actions = game.get_actions()
+            chosen = possible_actions[np.random.choice(len(possible_actions))]
+            state = game.get_child_state(chosen)
+            if game.is_current_state_terminal():
+                break
+        reward = game.get_state_reward()
+        if reward == 1.0:
+            wins += 1
+        elif reward == -1.0:
+            losses += 1
+
+        print("wins, losses", wins, losses)
+
+
 
     while True:
         game = Nim(**nim_config)
