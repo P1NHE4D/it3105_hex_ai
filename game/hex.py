@@ -270,3 +270,15 @@ def get_cell_neighbours(row, col, board_size):
             if (i, j) not in ignore and 0 <= i < board_size and 0 <= j < board_size:
                 neighbours.append((i, j))
     return neighbours
+
+
+if __name__ == '__main__':
+    h = Hex(5)
+    h.init_game()
+    while not h.is_current_state_terminal():
+        actions = h.get_actions()
+        action_idx = np.random.choice(np.arange(0, len(actions)))
+        action = actions[action_idx]
+        h.get_child_state(action)
+    print("Player {} won.".format("one" if h.state == HexState.PLAYER_ONE_WON else "two"))
+    h.visualize()
