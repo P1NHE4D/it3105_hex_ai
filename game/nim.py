@@ -4,6 +4,7 @@ from game.interface import Game
 
 
 class Nim(Game):
+
     def __init__(self, stones=4, max_take=2, **kwargs):
         """
         Nim is a game where two player alternate taking stones from a central pile. There are 'stones' stones,
@@ -41,11 +42,18 @@ class Nim(Game):
         """
         return self.max_take
 
+    def get_action_index(self, action):
+        return action - 1
+
+    def get_action_by_index(self, index):
+        return index + 1
+
     def encode_state(self):
-        part_player = (float(self.player_to_move()),)
-        part_taken = (0.0,) * (self.stones - self.remaining_stones)
-        part_untaken = (1.0,) * self.remaining_stones
-        return part_player + part_taken + part_untaken
+        encoding = np.ones(1 + self.stones)
+        encoding[0] = self.player_to_move()
+        stones_taken = self.stones - self.remaining_stones
+        encoding[np.arange(1, stones_taken + 1)] = 0
+        return encoding
 
     def init_game(self):
         self.remaining_stones = self.stones
@@ -54,19 +62,11 @@ class Nim(Game):
     def is_current_state_terminal(self):
         return self.remaining_stones == 0
 
-    def get_actions(self):
-        actions = []
-        for i in range(self.max_take):
-            if i+1 > self.remaining_stones:
-                # this action (and all actions greater than it) use more stones than are remaining, so break
-                break
-            actions.append(tuple(1.0 if j == i else 0.0 for j in range(self.max_take)))
-
-        return actions
+    def get_legal_actions(self):
+        return np.arange(1, min(self.max_take, self.remaining_stones) + 1)
 
     def get_child_state(self, action):
-        took = np.argmax(action)+1
-        self.remaining_stones -= took
+        self.remaining_stones -= action
 
         # TODO: should we not advance player if we're in a terminal state?
         self.advance_player()
@@ -78,7 +78,6 @@ class Nim(Game):
 
     def get_state_reward(self):
         if not self.is_current_state_terminal():
-            # if the game is not over, no one has won
             return 0.0
 
         # if we're in a terminal state, that means the last player that made a move made the winning move (we have to
@@ -111,7 +110,7 @@ if __name__ == '__main__':
         print("visualizing current state...")
         g.visualize()
         print("player to move", g.player_to_move())
-        a = g.get_actions()
+        a = g.get_legal_actions()
         print("actions", a)
         to_take = a[np.random.choice(np.arange(len(a)))]
         print("taking action", to_take)

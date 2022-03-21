@@ -28,13 +28,21 @@ class Game(ABC):
         pass
 
     @abstractmethod
+    def get_action_index(self, action):
+        pass
+
+    @abstractmethod
+    def get_action_by_index(self, index):
+        pass
+
+    @abstractmethod
     def is_current_state_terminal(self):
         pass
 
     @abstractmethod
-    def get_actions(self):
+    def get_legal_actions(self):
         """
-        :return: possible actions
+        :return: legal actions
         """
         pass
 

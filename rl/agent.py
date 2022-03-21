@@ -1,6 +1,4 @@
 import os
-
-from game.nim import Nim
 from rl.mcts import MCTS
 from keras.models import Sequential, Model
 from keras.layers import Dense
@@ -32,12 +30,12 @@ class Agent:
         self.file_path = anet_config.get("file_path", f"{ROOT_DIR}/rl/models")
         self.game = game
         self.anet = ANET(
-            anet_config.get("hidden_layer_nodes", [32]),
-            game.get_action_length(),
-            anet_config.get("learning_rate", 0.01),
-            anet_config.get("weight_file", None)
+            hidden_layer_nodes=anet_config.get("hidden_layer_nodes", [32]),
+            output_nodes=game.get_action_length(),
+            learning_rate=anet_config.get("learning_rate", 0.01),
+            weight_file=anet_config.get("weight_file", None)
         )
-        self.mcts_tree = MCTS()
+        self.mcts_tree = None
 
     def train(self):
         rbuf_x = []
@@ -45,43 +43,45 @@ class Agent:
         progress = tqdm(range(self.episodes), desc="Episode")
         for episode in progress:
             # reset mcts tree
-            self.mcts_tree = MCTS()
+            self.mcts_tree = MCTS(self)
 
             state = self.game.init_game()
-            actions = self.game.get_actions()
             while not self.game.is_current_state_terminal():
                 distribution = self.mcts_tree.simulate(game=self.game, num_sim=self.num_sim)
                 rbuf_x.append(state)
                 rbuf_y.append(distribution)
-                action = actions[np.argmax(distribution)]
+                action_idx = np.argmax(distribution)
+                action = self.game.get_action_by_index(action_idx)
                 state = self.game.get_child_state(action)
-                actions = self.game.get_actions()
                 self.mcts_tree.retain_subtree(action)
+
             history = LossHistory()
             self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs, verbose=3, callbacks=[history])
             if episode % self.save_interval == 0:
                 self.anet.save_weights(filepath=f"{self.file_path}/anet_episode_{episode}")
+
             progress.set_description(
                 "Batch loss: {:.2f}".format(history.losses[-1]) +
                 " | Average loss: {:.2f}".format(np.mean(history.losses))
             )
 
     def propose_action(self, state, actions):
-        distribution = self.anet.predict([state])[0]
+        """
 
-        for i in range(len(distribution)):
-            for action in actions:
-                if action[i] == 1.0:
-                    # if there exists a legal action corresponding to this position of the distribution, do nothing
-                    break
-            else:
-                # otherwise, don't allow this action
-                distribution[i] = 0.0
+        :param state: state of the game
+        :param actions: Possible actions from the given state (not all actions)
+        :return: action
+        """
+        distribution = self.anet.predict(np.array([state]))[0]
 
-        # rescale to sum to 1
+        all_actions_idx = np.arange(0, len(distribution))
+        legal_actions_idx = np.array(list(map(lambda action: self.game.get_action_index(action), actions)))
+        illegal_actions_idx = np.setdiff1d(all_actions_idx, legal_actions_idx)
+        distribution[illegal_actions_idx] = 0.0
         distribution = distribution / np.sum(distribution)
 
-        action = actions[np.argmax(distribution)]
+        action_idx = np.argmax(distribution)
+        action = self.game.get_action_by_index(action_idx)
         return action
 
 
@@ -112,7 +112,6 @@ class ANET(Model):
         self.model_trained = False
         try:
             self.load_weights(weight_file)
-            self.model_trained = True
         except Exception as e:
             print("Unable to load weight file", e)
 
@@ -121,7 +120,6 @@ class ANET(Model):
 
     def fit(self, **kwargs):
         res = super().fit(**kwargs)
-        self.model_trained = True
         return res
 
     def predict(
@@ -135,8 +133,6 @@ class ANET(Model):
             workers=1,
             use_multiprocessing=False
     ):
-        if not self.model_trained:
-            raise Exception("Model needs to be trained first")
         return super().predict(
             x,
             batch_size,
@@ -151,57 +147,57 @@ class ANET(Model):
     def get_config(self):
         super().get_config()
 
-if __name__ == '__main__':
-    nim_config = {'stones': 5, 'max_take': 3}
-    game = Nim(**nim_config)
-    a = Agent(game, config={
-        'num_sim': 1000,
-        'anet': {
-            'weight_file': 'rl/models/anet_episode_40',
-        }
-    })
-    a.train()
-
-    wins = 0
-    losses = 0
-    while True:
-        game = Nim(**nim_config)
-        state = game.init_game()
-        while True:
-            chosen = a.propose_action(state, game.get_actions())
-            state = game.get_child_state(chosen)
-            if game.is_current_state_terminal():
-                break
-            possible_actions = game.get_actions()
-            chosen = possible_actions[np.random.choice(len(possible_actions))]
-            state = game.get_child_state(chosen)
-            if game.is_current_state_terminal():
-                break
-        reward = game.get_state_reward()
-        if reward == 1.0:
-            wins += 1
-        elif reward == -1.0:
-            losses += 1
-
-        print("wins, losses", wins, losses)
-
-
-
-    while True:
-        game = Nim(**nim_config)
-        print("initial state", game.init_game())
-        while not game.is_current_state_terminal():
-            print("computer to move")
-            chosen = a.propose_action(game.get_current_state(), game.get_actions())
-            print("it chose", chosen)
-            game.get_child_state(chosen)
-            print("state is now", game.get_current_state())
-            if game.is_current_state_terminal():
-                print("game end")
-                break
-            actions = game.get_actions()
-            i = int(input(f"your move ({[(i, a) for i, a in enumerate(actions)]}):"))
-            print("you chose", actions[i])
-            game.get_child_state(actions[i])
-            print("state is now", game.get_current_state())
-        print("winner was", game.get_state_reward())
+# if __name__ == '__main__':
+#     nim_config = {'stones': 5, 'max_take': 3}
+#     game = Nim(**nim_config)
+#     a = Agent(game, config={
+#         'num_sim': 1000,
+#         'anet': {
+#             'weight_file': 'rl/models/anet_episode_40',
+#         }
+#     })
+#     a.train()
+#
+#     wins = 0
+#     losses = 0
+#     while True:
+#         game = Nim(**nim_config)
+#         state = game.init_game()
+#         while True:
+#             chosen = a.propose_action(state, game.get_actions())
+#             state = game.get_child_state(chosen)
+#             if game.is_current_state_terminal():
+#                 break
+#             possible_actions = game.get_actions()
+#             chosen = possible_actions[np.random.choice(len(possible_actions))]
+#             state = game.get_child_state(chosen)
+#             if game.is_current_state_terminal():
+#                 break
+#         reward = game.get_state_reward()
+#         if reward == 1.0:
+#             wins += 1
+#         elif reward == -1.0:
+#             losses += 1
+#
+#         print("wins, losses", wins, losses)
+#
+#
+#
+#     while True:
+#         game = Nim(**nim_config)
+#         print("initial state", game.init_game())
+#         while not game.is_current_state_terminal():
+#             print("computer to move")
+#             chosen = a.propose_action(game.get_current_state(), game.get_actions())
+#             print("it chose", chosen)
+#             game.get_child_state(chosen)
+#             print("state is now", game.get_current_state())
+#             if game.is_current_state_terminal():
+#                 print("game end")
+#                 break
+#             actions = game.get_actions()
+#             i = int(input(f"your move ({[(i, a) for i, a in enumerate(actions)]}):"))
+#             print("you chose", actions[i])
+#             game.get_child_state(actions[i])
+#             print("state is now", game.get_current_state())
+#         print("winner was", game.get_state_reward())
