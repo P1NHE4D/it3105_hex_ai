@@ -38,6 +38,9 @@ class Agent:
         self.mcts_tree = None
 
     def train(self):
+        """
+        Learns an action policy by utilising monte carlo tree search simulations
+        """
         rbuf_x = []
         rbuf_y = []
         progress = tqdm(range(self.episodes), desc="Episode")
@@ -67,10 +70,11 @@ class Agent:
 
     def propose_action(self, state, actions):
         """
+        Proposes an action for the given state
 
         :param state: state of the game
         :param actions: Possible actions from the given state (not all actions)
-        :return: action
+        :return: optimal action according to the learned policy
         """
         distribution = self.anet.predict(np.array([state]))[0]
 

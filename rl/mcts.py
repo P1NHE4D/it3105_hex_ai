@@ -30,15 +30,27 @@ class MCTSNode:
         self.untried_actions = list(legal_actions)
 
     def is_terminal(self):
+        """
+        :return: True if the node is a terminal node, otherwise False
+        """
         return len(self.untried_actions) == 0 and len(self.children) == 0
 
     def is_fully_expanded(self):
+        """
+        :return: True if all child nodes have been generated, otherwise False
+        """
         return len(self.untried_actions) == 0
 
     def describe(self):
         pprint(vars(self))
 
     def expand(self, game: Game):
+        """
+        Adds a new child node that has not been visited yet
+
+        :param game: game instance
+        :return: child node
+        """
         action = self.untried_actions.pop(0)
         child_state = game.get_child_state(action)
         child_node = MCTSNode(
@@ -61,9 +73,9 @@ class MCTS:
 
     def simulate(self, game: Game, num_sim):
         """
-        Simulates
+        Performs simulations of the current game to obtain an action distribution
 
-        :param game: current game
+        :param game: game instance
         :param num_sim: number of simulations
         :return: distribution over all actions
         """
@@ -80,7 +92,7 @@ class MCTS:
             sim_game = game.create_copy()
             node: MCTSNode = self.root
 
-            # use tree policy to get to a node that is not fully expanded
+            # use tree policy to get to a node that is not fully expanded and not a terminal node
             while node.is_fully_expanded() and not node.is_terminal():
                 node = self.tree_policy(node)
                 sim_game.get_child_state(node.action)
@@ -102,6 +114,13 @@ class MCTS:
         return self.action_distribution(game, self.root)
 
     def tree_policy(self, node, c=1.0):
+        """
+        Computes the optimal action in the given node and returns the resulting child node
+
+        :param node: starting node
+        :param c: exploration constant
+        :return: optimal child node according to the tree policy
+        """
         exploration_bonuses = []
         q_values = []
         for child in node.children:
@@ -121,6 +140,12 @@ class MCTS:
         return node.children[child_idx]
 
     def rollout(self, game: Game):
+        """
+        Performs a rollout of the current game until a terminal state is reached
+
+        :param game: game instance
+        :return: obtained reward
+        """
         state = game.get_current_state()
         while not game.is_current_state_terminal():
             action = self.agent.propose_action(state, game.get_legal_actions())
@@ -128,6 +153,12 @@ class MCTS:
         return game.get_state_reward()
 
     def action_distribution(self, game: Game, node: MCTSNode):
+        """
+        Computes an action distribution over all actions for the given node
+        :param game: game instance
+        :param node: node for which the distribution should be calculated
+        :return: distribution over all actions
+        """
         distribution = np.zeros((game.get_action_length()))
         for child in node.children:
             idx = game.get_action_index(child.action)
@@ -136,9 +167,9 @@ class MCTS:
 
     def retain_subtree(self, action):
         """
-        Retain chosen state but discard rest of tree
+        Picks the child node resulting from the given action as the new root of the tree
 
-        :param action: action chosen from root
+        :param action: action picked in root node
         """
         for child in self.root.children:
             if child.action == action:
