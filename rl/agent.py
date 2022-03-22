@@ -2,7 +2,7 @@ import os
 from rl.mcts import MCTS
 from keras.models import Sequential, Model
 from keras.layers import Dense
-from keras.activations import sigmoid, leaky_relu
+from keras.activations import sigmoid
 from keras.callbacks import Callback
 from tensorflow import keras
 from tqdm import tqdm
@@ -30,8 +30,9 @@ class Agent:
         self.file_path = anet_config.get("file_path", f"{ROOT_DIR}/rl/models")
         self.game = game
         self.anet = ANET(
-            hidden_layer_nodes=anet_config.get("hidden_layer_nodes", [32]),
+            hidden_layers=anet_config.get("hidden_layers", [(32, "relu")]),
             output_nodes=game.get_action_length(),
+            optimizer=anet_config.get("optimizer", "adam"),
             learning_rate=anet_config.get("learning_rate", 0.01),
             weight_file=anet_config.get("weight_file", None)
         )
@@ -59,7 +60,8 @@ class Agent:
                 self.mcts_tree.retain_subtree(action)
 
             history = LossHistory()
-            self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs, verbose=3, callbacks=[history])
+            self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
+                          verbose=3, callbacks=[history])
             if episode % self.save_interval == 0:
                 self.anet.save_weights(filepath=f"{self.file_path}/anet_episode_{episode}")
 
@@ -102,15 +104,25 @@ class LossHistory(Callback):
         self.losses.append(logs.get('loss'))
 
 
+def configure_optimizer(optimizer, learning_rate):
+    if optimizer == "sgd":
+        return keras.optimizers.SGD(learning_rate=learning_rate)
+    if optimizer == "rms_prop":
+        return keras.optimizers.RMSprop(learning_rate=learning_rate)
+    if optimizer == "adagrad":
+        return keras.optimizers.Adagrad(learning_rate=learning_rate)
+    return keras.optimizers.Adam(learning_rate=learning_rate)
+
+
 class ANET(Model):
 
-    def __init__(self, hidden_layer_nodes, output_nodes, learning_rate, weight_file, *args, **kwargs):
+    def __init__(self, hidden_layers, output_nodes, optimizer, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        layers = [Dense(nodes, activation=leaky_relu) for nodes in hidden_layer_nodes]
+        layers = [Dense(nodes, activation=activation) for nodes, activation in hidden_layers]
         layers.append(Dense(output_nodes, activation=sigmoid))
         self.model = Sequential(layers)
         self.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=learning_rate),
+            optimizer=configure_optimizer(optimizer, learning_rate),
             loss=keras.losses.binary_crossentropy
         )
         self.model_trained = False
@@ -150,58 +162,3 @@ class ANET(Model):
 
     def get_config(self):
         super().get_config()
-
-# if __name__ == '__main__':
-#     nim_config = {'stones': 5, 'max_take': 3}
-#     game = Nim(**nim_config)
-#     a = Agent(game, config={
-#         'num_sim': 1000,
-#         'anet': {
-#             'weight_file': 'rl/models/anet_episode_40',
-#         }
-#     })
-#     a.train()
-#
-#     wins = 0
-#     losses = 0
-#     while True:
-#         game = Nim(**nim_config)
-#         state = game.init_game()
-#         while True:
-#             chosen = a.propose_action(state, game.get_actions())
-#             state = game.get_child_state(chosen)
-#             if game.is_current_state_terminal():
-#                 break
-#             possible_actions = game.get_actions()
-#             chosen = possible_actions[np.random.choice(len(possible_actions))]
-#             state = game.get_child_state(chosen)
-#             if game.is_current_state_terminal():
-#                 break
-#         reward = game.get_state_reward()
-#         if reward == 1.0:
-#             wins += 1
-#         elif reward == -1.0:
-#             losses += 1
-#
-#         print("wins, losses", wins, losses)
-#
-#
-#
-#     while True:
-#         game = Nim(**nim_config)
-#         print("initial state", game.init_game())
-#         while not game.is_current_state_terminal():
-#             print("computer to move")
-#             chosen = a.propose_action(game.get_current_state(), game.get_actions())
-#             print("it chose", chosen)
-#             game.get_child_state(chosen)
-#             print("state is now", game.get_current_state())
-#             if game.is_current_state_terminal():
-#                 print("game end")
-#                 break
-#             actions = game.get_actions()
-#             i = int(input(f"your move ({[(i, a) for i, a in enumerate(actions)]}):"))
-#             print("you chose", actions[i])
-#             game.get_child_state(actions[i])
-#             print("state is now", game.get_current_state())
-#         print("winner was", game.get_state_reward())
