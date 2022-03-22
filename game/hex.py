@@ -56,7 +56,7 @@ class Hex(Game):
         self.ohe_board[self.current_player] = 1
 
         # reset actions
-        self.legal_actions = np.copy(self.all_actions)
+        self.legal_actions = self.all_actions.copy()
 
         # reset game state
         self.state = HexState.UNDECIDED

@@ -1,6 +1,6 @@
 agent:
   episodes: 20
-  num_sim: 200
+  num_sim: 20
   save_interval: 10
   anet:
     learning_rate: 0.01
