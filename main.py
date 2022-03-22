@@ -1,4 +1,6 @@
 import os
+
+import numpy as np
 from yaml import safe_load, YAMLError
 
 from game.hex import Hex
@@ -26,6 +28,11 @@ def main():
         while not game.is_current_state_terminal():
             action = agent.propose_action(state, game.get_legal_actions())
             game.get_child_state(action)
+            if game.is_current_state_terminal():
+                break
+            action_idx = np.random.choice(np.arange(len(game.get_legal_actions())))
+            action = game.get_legal_actions()[action_idx]
+            state = game.get_child_state(action)
             game.visualize()
         reward = game.get_state_reward()
         if reward == 1.0:

@@ -1,13 +1,14 @@
 import os
 from rl.mcts import MCTS
 from keras.models import Sequential, Model
-from keras.layers import Dense
+from keras.layers import Dense, Softmax
 from keras.activations import sigmoid
 from keras.callbacks import Callback
 from tensorflow import keras
 from tqdm import tqdm
 from game.interface import Game
 import numpy as np
+import tensorflow as tf
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -78,7 +79,9 @@ class Agent:
         :param actions: Possible actions from the given state (not all actions)
         :return: optimal action according to the learned policy
         """
-        distribution = self.anet.predict(np.array([state]))[0]
+        tensor = tf.convert_to_tensor(np.array([state]))
+        distribution = self.anet(tensor)[0]
+        distribution = np.array(distribution)
 
         all_actions_idx = np.arange(0, len(distribution))
         legal_actions_idx = np.array(list(map(lambda action: self.game.get_action_index(action), actions)))
@@ -119,7 +122,8 @@ class ANET(Model):
     def __init__(self, hidden_layers, output_nodes, optimizer, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
         layers = [Dense(nodes, activation=activation) for nodes, activation in hidden_layers]
-        layers.append(Dense(output_nodes, activation=sigmoid))
+        layers.append(Dense(output_nodes))
+        layers.append(Softmax())
         self.model = Sequential(layers)
         self.compile(
             optimizer=configure_optimizer(optimizer, learning_rate),
