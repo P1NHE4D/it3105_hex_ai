@@ -104,7 +104,7 @@ class MCTS:
         q_values = []
         for child in node.children:
             u = c * np.sqrt((np.log(node.node_visit_count) / (1 + child.incoming_edge_visit_count)))
-            q = child.cumulative_reward / child.incoming_edge_visit_count
+            q = child.cumulative_reward / child.incoming_edge_visit_count if child.incoming_edge_visit_count > 0 else 0
             exploration_bonuses.append(u)
             q_values.append(q)
         child_idx = None

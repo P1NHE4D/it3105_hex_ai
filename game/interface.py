@@ -69,5 +69,12 @@ class Game(ABC):
         """
         return self.current_player
 
+    def next_player_to_move(self):
+        """
+
+        :return: which player's turn is it after an action is chosen. 0 or 1
+        """
+        return (self.current_player + 1) % self.max_players
+
     def advance_player(self):
         self.current_player = self.next_player_to_move()
