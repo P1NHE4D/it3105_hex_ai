@@ -20,13 +20,29 @@ class Game(ABC):
         pass
 
     @abstractmethod
+    def get_current_state(self):
+        pass
+
+    @abstractmethod
+    def get_action_length(self):
+        pass
+
+    @abstractmethod
+    def get_action_index(self, action):
+        pass
+
+    @abstractmethod
+    def get_action_by_index(self, index):
+        pass
+
+    @abstractmethod
     def is_current_state_terminal(self):
         pass
 
     @abstractmethod
-    def get_actions(self):
+    def get_legal_actions(self):
         """
-        :return: possible actions
+        :return: legal actions
         """
         pass
 
@@ -53,5 +69,12 @@ class Game(ABC):
         """
         return self.current_player
 
-    def next_player(self):
-        self.current_player = (self.current_player + 1) % self.max_players
+    def next_player_to_move(self):
+        """
+
+        :return: which player's turn is it after an action is chosen. 0 or 1
+        """
+        return (self.current_player + 1) % self.max_players
+
+    def advance_player(self):
+        self.current_player = self.next_player_to_move()

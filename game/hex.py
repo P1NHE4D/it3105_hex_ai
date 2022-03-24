@@ -1,5 +1,5 @@
 from enum import Enum
-from game.inferface import Game
+from game.interface import Game
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -31,7 +31,8 @@ class Hex(Game):
         self.board = construct_hex_board(board_size)
         self.ohe_board: list = []
         self.board_size = board_size
-        self.actions: list = []
+        self.legal_actions: list = []
+        self.all_actions = [(row, col) for row in range(self.board_size) for col in range(self.board_size)]
         self.state = HexState.UNDECIDED
 
     def init_game(self):
@@ -48,18 +49,21 @@ class Hex(Game):
         """
         # reset all cells of the board
         for node in self.board.flatten():
-            node.state = HexCellState.EMPTY
+            node.game_state = HexCellState.EMPTY
 
         # initialize new one hot encoding
         self.ohe_board = np.zeros(2 + 2 * self.board_size ** 2)
         self.ohe_board[self.current_player] = 1
 
         # reset actions
-        self.actions = [(row, col) for row in range(self.board_size) for col in range(self.board_size)]
+        self.legal_actions = self.all_actions.copy()
 
         # reset game state
         self.state = HexState.UNDECIDED
 
+        return self.ohe_board
+
+    def get_current_state(self):
         return self.ohe_board
 
     def is_current_state_terminal(self):
@@ -68,11 +72,21 @@ class Hex(Game):
         """
         return self.state == HexState.PLAYER_ONE_WON or self.state == HexState.PLAYER_TWO_WON
 
-    def get_actions(self):
+    def get_legal_actions(self):
         """
         :return: returns array comprising possible actions in current state
         """
-        return self.actions
+        return self.legal_actions
+
+    def get_action_length(self):
+        return len(self.all_actions)
+
+    def get_action_index(self, action):
+        row, col = action
+        return row * self.board_size + col
+
+    def get_action_by_index(self, index):
+        return self.all_actions[index]
 
     def get_child_state(self, action):
         """
@@ -85,10 +99,10 @@ class Hex(Game):
 
         # set board state
         row, col = action
-        self.board[row, col].state = HexCellState.PLAYER_ONE if self.current_player == 0 else HexCellState.PLAYER_TWO
+        self.board[row, col].game_state = HexCellState.PLAYER_ONE if self.current_player == 0 else HexCellState.PLAYER_TWO
 
         # remove picked action from possible actions
-        self.actions.remove((row, col))
+        self.legal_actions.remove((row, col))
 
         self.update_game_state(row, col)
 
@@ -98,7 +112,7 @@ class Hex(Game):
             ohe_index += 1
         self.ohe_board[ohe_index] = 1
         self.ohe_board[self.current_player] = 0
-        self.next_player()
+        self.advance_player()
         self.ohe_board[self.current_player] = 1
 
         return self.ohe_board
@@ -136,7 +150,7 @@ class Hex(Game):
             visited.add((row, col))
             for neighbour in self.board[row, col].neighbours:
                 neighbour_row, neighbour_col = neighbour
-                if self.board[neighbour_row, neighbour_col].state == cell_val and (
+                if self.board[neighbour_row, neighbour_col].game_state == cell_val and (
                 neighbour_row, neighbour_col) not in visited:
                     lines = lines.union(connected_lines(neighbour_row, neighbour_col, visited))
 
@@ -163,10 +177,10 @@ class Hex(Game):
             for col, node in enumerate(hex_row):
                 node_color = "white"
                 node_edge_color = "black"
-                if node.state == HexCellState.PLAYER_ONE:
+                if node.game_state == HexCellState.PLAYER_ONE:
                     node_color = "red"
                     node_edge_color = "red"
-                elif node.state == HexCellState.PLAYER_TWO:
+                elif node.game_state == HexCellState.PLAYER_TWO:
                     node_color = "black"
                 g.add_node("node_{}_{}".format(row, col), color=node_color, edge_color=node_edge_color)
 
@@ -176,11 +190,11 @@ class Hex(Game):
                 for neighbour in node.neighbours:
                     edge_color = "black"
                     edge_weight = 1
-                    if node.state == self.board[neighbour].state:
-                        if node.state == HexCellState.PLAYER_ONE:
+                    if node.game_state == self.board[neighbour].game_state:
+                        if node.game_state == HexCellState.PLAYER_ONE:
                             edge_color = "red"
                             edge_weight = 4
-                        elif node.state == HexCellState.PLAYER_TWO:
+                        elif node.game_state == HexCellState.PLAYER_TWO:
                             edge_weight = 4
                     g.add_edge("node_{}_{}".format(row, col), "node_{}_{}".format(*neighbour), weight=edge_weight,
                                color=edge_color)
@@ -273,7 +287,7 @@ if __name__ == '__main__':
     h = Hex(5)
     h.init_game()
     while not h.is_current_state_terminal():
-        actions = h.get_actions()
+        actions = h.get_legal_actions()
         action_idx = np.random.choice(np.arange(0, len(actions)))
         action = actions[action_idx]
         h.get_child_state(action)
