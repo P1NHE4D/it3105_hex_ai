@@ -48,9 +48,11 @@ class MCTSNode:
 
 class MCTS:
 
-    def __init__(self, agent):
+    def __init__(self, config, agent):
         self.root = None
         self.agent = agent
+        self.c = config.get("c", 1.0)
+        self.exp_prob = config.get("exp_prob", 1.0)
 
     def simulate(self, game: Game, num_sim):
         """
@@ -76,7 +78,8 @@ class MCTS:
                 sim_game.get_child_state(node.action)
 
             # only expand if node is not terminal
-            if not sim_game.is_current_state_terminal():
+            expand_tree = np.random.choice([True, False], p=[self.exp_prob, 1 - self.exp_prob])
+            if expand_tree and not sim_game.is_current_state_terminal():
                 node = node.expand(sim_game)
                 sim_game.get_child_state(node.action)
 
@@ -92,7 +95,7 @@ class MCTS:
 
         return self.action_distribution(game, self.root)
 
-    def tree_policy(self, node, c=1.0):
+    def tree_policy(self, node):
         """
         Computes the optimal action in the given node and returns the resulting child node
 
@@ -103,7 +106,7 @@ class MCTS:
         exploration_bonuses = []
         q_values = []
         for child in node.children:
-            u = c * np.sqrt((np.log(node.node_visit_count) / (1 + child.incoming_edge_visit_count)))
+            u = self.c * np.sqrt((np.log(node.node_visit_count) / (1 + child.incoming_edge_visit_count)))
             q = child.cumulative_reward / child.incoming_edge_visit_count if child.incoming_edge_visit_count > 0 else 0
             exploration_bonuses.append(u)
             q_values.append(q)

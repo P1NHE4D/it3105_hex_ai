@@ -9,6 +9,7 @@ from tqdm import tqdm
 from game.interface import Game
 import numpy as np
 import tensorflow as tf
+from collections import deque
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -23,7 +24,9 @@ class Agent:
         if config is None:
             config = {}
         anet_config = config.get("anet", {})
+        self.mcts_config = config.get("mcts", {})
         self.episodes = config.get("episodes", 50)
+        self.rbuf_size = config.get("rbuf_size", 1000)
         self.save_interval = config.get("save_interval", 10)
         self.num_sim = config.get("num_sim", 50)
         self.epochs = anet_config.get("epochs", 10)
@@ -43,12 +46,12 @@ class Agent:
         """
         Learns an action policy by utilising monte carlo tree search simulations
         """
-        rbuf_x = []
-        rbuf_y = []
+        rbuf_x = deque(maxlen=self.rbuf_size)
+        rbuf_y = deque(maxlen=self.rbuf_size)
         progress = tqdm(range(self.episodes), desc="Episode")
         for episode in progress:
             # reset mcts tree
-            self.mcts_tree = MCTS(self)
+            self.mcts_tree = MCTS(config=self.mcts_config, agent=self)
 
             state = self.game.init_game()
             while not self.game.is_current_state_terminal():
@@ -67,8 +70,9 @@ class Agent:
                 self.anet.save_weights(filepath=f"{self.file_path}/anet_episode_{episode}")
 
             progress.set_description(
-                "Batch loss: {:.2f}".format(history.losses[-1]) +
-                " | Average loss: {:.2f}".format(np.mean(history.losses))
+                "Batch loss: {:.4f}".format(history.losses[-1]) +
+                " | Average loss: {:.4f}".format(np.mean(history.losses)) +
+                " | RBUF Size: {}".format(len(rbuf_x))
             )
 
     def propose_action(self, state, actions):
