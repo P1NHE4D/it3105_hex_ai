@@ -1,6 +1,6 @@
 agent:
   episodes: 100
-  num_sim: 500
+  num_sim: 100
   save_interval: 10
   anet:
     learning_rate: 0.01
@@ -9,5 +9,6 @@ agent:
     optimizer: "adam"
     hidden_layers: [
       [64, "relu"],
-      [32, "relu"]
+      [32, "relu"],
+      [16, "relu"],
     ]

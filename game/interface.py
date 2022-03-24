@@ -69,5 +69,5 @@ class Game(ABC):
         """
         return self.current_player
 
-    def next_player(self):
-        self.current_player = (self.current_player + 1) % self.max_players
+    def advance_player(self):
+        self.current_player = self.next_player_to_move()

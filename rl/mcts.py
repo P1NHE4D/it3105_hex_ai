@@ -5,7 +5,7 @@ from game.nim import Nim
 
 
 class MCTSNode:
-    def __init__(self, parent, action, game_state, player, legal_actions, action_length):
+    def __init__(self, parent, action, player):
         """
         A MCTSNode represents a single node in the tree of MCTS, as well as the edge that leads to it (if any). The
         semantics are: "We were in 'parent_state', then 'edge_action' was taken, now I am in 'state' as 'player' and can
@@ -13,33 +13,18 @@ class MCTSNode:
 
         :param parent: state we were in to reach this state
         :param action: action that was taken from parent state to reach this state
-        :param game_state: state this node corresponds to
         :param player: player to move
-        :param legal_actions: actions possible from node. Notice that len(actions) == 0 means the node is terminal
-        :param action_length: length of single action representation. needed when building action distribution
         """
-        self.game_state = game_state
         self.player = player
         self.parent = parent
         self.action = action
-        self.action_length = action_length
         self.node_visit_count = 0
         self.incoming_edge_visit_count = 0
         self.cumulative_reward = 0
         self.children: list[MCTSNode] = []
-        self.untried_actions = list(legal_actions)
 
-    def is_terminal(self):
-        """
-        :return: True if the node is a terminal node, otherwise False
-        """
-        return len(self.untried_actions) == 0 and len(self.children) == 0
-
-    def is_fully_expanded(self):
-        """
-        :return: True if all child nodes have been generated, otherwise False
-        """
-        return len(self.untried_actions) == 0
+    def is_leaf(self):
+        return len(self.children) == 0
 
     def describe(self):
         pprint(vars(self))
@@ -51,18 +36,14 @@ class MCTSNode:
         :param game: game instance
         :return: child node
         """
-        action = self.untried_actions.pop(0)
-        child_state = game.get_child_state(action)
-        child_node = MCTSNode(
-            parent=self,
-            action=action,
-            game_state=child_state,
-            player=game.current_player,
-            legal_actions=game.get_legal_actions(),
-            action_length=game.get_action_length(),
-        )
-        self.children.append(child_node)
-        return child_node
+        for action in game.get_legal_actions():
+            self.children.append(MCTSNode(
+                parent=self,
+                action=action,
+                player=game.next_player_to_move()
+            ))
+        idx = np.random.choice(np.arange(len(self.children)))
+        return self.children[idx]
 
 
 class MCTS:
@@ -83,23 +64,21 @@ class MCTS:
             self.root = MCTSNode(
                 parent=None,
                 action=None,
-                game_state=game.get_current_state(),
                 player=game.player_to_move(),
-                legal_actions=game.get_legal_actions(),
-                action_length=game.get_action_length(),
             )
         for _ in range(num_sim):
             sim_game = game.create_copy()
             node: MCTSNode = self.root
 
             # use tree policy to get to a node that is not fully expanded and not a terminal node
-            while node.is_fully_expanded() and not node.is_terminal():
+            while not node.is_leaf():
                 node = self.tree_policy(node)
                 sim_game.get_child_state(node.action)
 
             # only expand if node is not terminal
-            if not node.is_terminal():
+            if not sim_game.is_current_state_terminal():
                 node = node.expand(sim_game)
+                sim_game.get_child_state(node.action)
 
             # obtain reward
             reward = self.rollout(sim_game)

@@ -112,7 +112,7 @@ class Hex(Game):
             ohe_index += 1
         self.ohe_board[ohe_index] = 1
         self.ohe_board[self.current_player] = 0
-        self.next_player()
+        self.advance_player()
         self.ohe_board[self.current_player] = 1
 
         return self.ohe_board

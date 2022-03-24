@@ -73,9 +73,6 @@ class Nim(Game):
 
         return self.encode_state()
 
-    def advance_player(self):
-        self.current_player = (self.current_player + 1) % 2
-
     def get_state_reward(self):
         if not self.is_current_state_terminal():
             return 0.0
