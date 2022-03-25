@@ -44,7 +44,7 @@ def main():
         except YAMLError as exc:
             print(exc)
     game = Nim(
-        stones=4,
+        stones=8,
         max_take=2,
     )
     agent = Agent(config=config.get("agent", {}), game=game)
