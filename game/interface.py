@@ -5,8 +5,8 @@ from copy import deepcopy
 class Game(ABC):
     """
     Abstraction which presents the ruleset of a 2-player game with deterministic actions as states, actions and rewards.
-    States are encoded as tuples of integers, and actions are encoded as integer indexes into the complete list of
-    all actions.
+    States are encoded as 1d numpy arrays of integers, and actions are encoded as integer indexes into the complete
+    list of all actions.
     """
 
     @abstractmethod
