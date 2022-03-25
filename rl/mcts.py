@@ -29,32 +29,17 @@ class MCTSNode:
     def describe(self):
         pprint(vars(self))
 
-    def expand(self, game: Game):
-        """
-        Adds a new child node that has not been visited yet
-
-        :param game: game instance
-        :return: child node
-        """
-        for action in game.get_legal_actions():
-            self.children.append(MCTSNode(
-                parent=self,
-                action=action,
-                player=game.next_player_to_move()
-            ))
-        idx = np.random.choice(np.arange(len(self.children)))
-        return self.children[idx]
-
 
 class MCTS:
 
-    def __init__(self, config, agent):
+    def __init__(self, config, agent, game):
         self.root = None
         self.agent = agent
         self.c = config.get("c", 1.0)
         self.exp_prob = config.get("exp_prob", 1.0)
+        self.game = game
 
-    def simulate(self, game: Game, num_sim):
+    def simulate(self, state, num_sim):
         """
         Performs simulations of the current game to obtain an action distribution
 
@@ -66,25 +51,26 @@ class MCTS:
             self.root = MCTSNode(
                 parent=None,
                 action=None,
-                player=game.player_to_move(),
+                player=self.game.player_to_move(state),
             )
         for _ in range(num_sim):
-            sim_game = game.create_copy()
+            simulation_state = state
+
             node: MCTSNode = self.root
 
             # use tree policy to get to a node that is not fully expanded and not a terminal node
             while not node.is_leaf():
                 node = self.tree_policy(node)
-                sim_game.get_child_state(node.action)
+                simulation_state = self.game.get_child_state(simulation_state, node.action)
 
             # only expand if node is not terminal
             expand_tree = np.random.choice([True, False], p=[self.exp_prob, 1 - self.exp_prob])
-            if expand_tree and not sim_game.is_current_state_terminal():
-                node = node.expand(sim_game)
-                sim_game.get_child_state(node.action)
+            if expand_tree and not self.game.is_state_terminal(simulation_state):
+                node = self.expand(node, simulation_state)
+                simulation_state = self.game.get_child_state(simulation_state, node.action)
 
             # obtain reward
-            reward = self.rollout(sim_game)
+            reward = self.rollout(simulation_state)
 
             # update nodes on path
             while node is not None:
@@ -93,7 +79,7 @@ class MCTS:
                 node.cumulative_reward += reward
                 node = node.parent
 
-        return self.action_distribution(game, self.root)
+        return self.action_distribution(state, self.root)
 
     def tree_policy(self, node):
         """
@@ -121,29 +107,28 @@ class MCTS:
 
         return node.children[child_idx]
 
-    def rollout(self, game: Game):
+    def rollout(self, state):
         """
         Performs a rollout of the current game until a terminal state is reached
 
         :param game: game instance
         :return: obtained reward
         """
-        state = game.get_current_state()
-        while not game.is_current_state_terminal():
-            action = self.agent.propose_action(state, game.get_legal_actions())
-            state = game.get_child_state(action)
-        return game.get_state_reward()
+        while not self.game.is_state_terminal(state):
+            action = self.agent.propose_action(state, self.game.get_legal_actions(state))
+            state = self.game.get_child_state(state, action)
+        return self.game.get_state_reward(state)
 
-    def action_distribution(self, game: Game, node: MCTSNode):
+    def action_distribution(self, state, node: MCTSNode):
         """
         Computes an action distribution over all actions for the given node
-        :param game: game instance
+        :param state: game state
         :param node: node for which the distribution should be calculated
         :return: distribution over all actions
         """
-        distribution = np.zeros((game.get_action_length()))
+        distribution = np.zeros((self.game.number_of_actions()))
         for child in node.children:
-            idx = game.get_action_index(child.action)
+            idx = child.action
             distribution[idx] = child.incoming_edge_visit_count
         return distribution / np.sum(distribution)
 
@@ -160,17 +145,39 @@ class MCTS:
                 return
         raise ValueError('passed action does not correspond to a child of root')
 
+    def expand(self, node, state):
+        """
+        Expands node
+
+        :param node: node to expand
+        :param state: game state
+        :return: child node
+        """
+        for action in self.game.get_legal_actions(state):
+            node.children.append(MCTSNode(
+                parent=node,
+                action=action,
+                player=self.game.next_player_to_move(state)
+            ))
+        idx = np.random.choice(np.arange(len(node.children)))
+        return node.children[idx]
+
+
+
 
 if __name__ == '__main__':
     # test case
-    if False:
-        game = Nim()
-        node = MCTSNode(
-            parent_state=None,
-            edge_action=None,
-            state=game.init_game(),
+    if True:
+        game = Nim(
+            stones=4,
+            max_take=2,
         )
-        print(node.rollout(game))
+        mcts = MCTS(
+            config={},
+            agent=None,
+            game=game,
+        )
+        print(mcts.simulate(game.get_initial_state(), num_sim=5000))
     if False:
         game = Nim()
         node = MCTSNode(
@@ -185,7 +192,7 @@ if __name__ == '__main__':
             if not node.is_fully_expanded():
                 node = node.expand(game)
         node.describe()
-    if True:
+    if False:
         while True:
             game = Nim(
                 stones=2,

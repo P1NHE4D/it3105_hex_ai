@@ -35,7 +35,7 @@ class Agent:
         self.game = game
         self.anet = ANET(
             hidden_layers=anet_config.get("hidden_layers", [(32, "relu")]),
-            output_nodes=game.get_action_length(),
+            output_nodes=game.number_of_actions(),
             optimizer=anet_config.get("optimizer", "adam"),
             learning_rate=anet_config.get("learning_rate", 0.01),
             weight_file=anet_config.get("weight_file", None)
@@ -51,17 +51,16 @@ class Agent:
         progress = tqdm(range(self.episodes), desc="Episode")
         for episode in progress:
             # reset mcts tree
-            self.mcts_tree = MCTS(config=self.mcts_config, agent=self)
+            self.mcts_tree = MCTS(config=self.mcts_config, agent=self, game=self.game)
 
-            state = self.game.init_game()
-            while not self.game.is_current_state_terminal():
-                distribution = self.mcts_tree.simulate(game=self.game, num_sim=self.num_sim)
-                rbuf_x.append(state)
-                rbuf_y.append(distribution)
+            state = self.game.get_initial_state()
+            while not self.game.is_state_terminal(state):
+                distribution = self.mcts_tree.simulate(state=state, num_sim=self.num_sim)
+                rbuf_x.appendleft(state)
+                rbuf_y.appendleft(distribution)
                 action_idx = np.argmax(distribution)
-                action = self.game.get_action_by_index(action_idx)
-                state = self.game.get_child_state(action)
-                self.mcts_tree.retain_subtree(action)
+                state = self.game.get_child_state(state, action_idx)
+                self.mcts_tree.retain_subtree(action_idx)
 
             history = LossHistory()
             self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
@@ -87,15 +86,13 @@ class Agent:
         distribution = self.anet(tensor)[0]
         distribution = np.array(distribution)
 
-        all_actions_idx = np.arange(0, len(distribution))
-        legal_actions_idx = np.array(list(map(lambda action: self.game.get_action_index(action), actions)))
-        illegal_actions_idx = np.setdiff1d(all_actions_idx, legal_actions_idx)
+        all_actions_idx = np.arange(0, self.game.number_of_actions())
+        illegal_actions_idx = np.setdiff1d(all_actions_idx, actions)
         distribution[illegal_actions_idx] = 0.0
         distribution = distribution / np.sum(distribution)
 
         action_idx = np.argmax(distribution)
-        action = self.game.get_action_by_index(action_idx)
-        return action
+        return action_idx
 
 
 class LossHistory(Callback):

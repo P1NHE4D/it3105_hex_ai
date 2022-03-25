@@ -1,7 +1,13 @@
+import dataclasses
+
 import numpy as np
 
 from game.interface import Game
 
+@dataclasses.dataclass
+class NimState:
+    player_to_move: int
+    remaining_stones: int
 
 class Nim(Game):
 
@@ -11,16 +17,11 @@ class Nim(Game):
         and a player can take a number of stones on their turn in the range [1,max_take]. The player who takes the last
         stone wins.
 
-        Representations:
-        * State representation is a 'stones' length tuple containing for the i'th stone 1 if the stone has been taken,
-          and 0 otherwise. The stones are taken in the order of left to right. For example, a 'stones=4' game would
-          start. as [1 1 1 1], and become [0 1 1 1] after a player takes one stone.
-        * Action representation is a 'max_take' length OHE tuple containing a 1 in the i'th position, where i+1 is the
-          number of stones a player would like to take. For example, a 'max_take=3' game where there are 2 stones left
-          would afford the actions: [1 0 0] or [0 1 0], corresponding to "take 1 stone" or "take 2 stones" respectively
+        State representation is a 'stones' length tuple containing for the i'th stone 1 if the stone has been taken,
+        and 0 otherwise. The stones are taken in the order of left to right. For example, a 'stones=4' game would
+        start. as (1 1 1 1), and become (0 1 1 1) after a player takes one stone.
 
-        Reward:
-        * Player 0 and 1 receive 1.0 and -1.0 when winning, respectively. 0 wants to maximize, 1 wants to minimize
+        Player 0 and 1 receive 1.0 and -1.0 when winning, respectively. 0 wants to maximize, 1 wants to minimize
 
         :param stones: number of stones on the board
         :param max_take: maximum number of stones a player can take on their turn
@@ -30,59 +31,55 @@ class Nim(Game):
         self.stones = stones
         self.max_take = max_take
 
-        # to be set upon first init_game (TODO: why do we have an init game function?)
-        self.remaining_stones = None
+        # materialized list of all possible actions, to be filtered and indexed into
+        self.actions = list(np.arange(1, self.max_take+1))
 
-    def get_current_state(self):
-        return self.encode_state()
+    def get_initial_state(self):
+        return self._encode_state(NimState(
+            player_to_move=0,
+            remaining_stones=self.stones,
+        ))
 
-    def get_action_length(self):
-        """
-        :return: number of cells used for OHE of single action
-        """
+    def number_of_actions(self):
         return self.max_take
 
-    def get_action_index(self, action):
-        return action - 1
-
-    def get_action_by_index(self, index):
-        return index + 1
-
-    def encode_state(self):
+    def _encode_state(self, nim_state: NimState):
         encoding = np.ones(1 + self.stones)
-        encoding[0] = self.player_to_move()
-        stones_taken = self.stones - self.remaining_stones
+        encoding[0] = nim_state.player_to_move
+        stones_taken = self.stones - nim_state.remaining_stones
         encoding[np.arange(1, stones_taken + 1)] = 0
         return encoding
 
-    def init_game(self):
-        self.remaining_stones = self.stones
-        return self.encode_state()
+    def _decode_state(self, encoded_state) -> NimState:
+        player_to_move = encoded_state[0]
+        # https://stackoverflow.com/a/25032853
+        taken_stones = np.searchsorted(encoded_state[1:], 1)
+        remaining_stones = self.stones - taken_stones
+        return NimState(
+            player_to_move=player_to_move,
+            remaining_stones=remaining_stones,
+        )
 
-    def is_current_state_terminal(self):
-        return self.remaining_stones == 0
+    def is_state_terminal(self, state):
+        return self._decode_state(state).remaining_stones == 0
 
-    def get_legal_actions(self):
-        return np.arange(1, min(self.max_take, self.remaining_stones) + 1)
+    def get_legal_actions(self, state):
+        remaining_stones = self._decode_state(state).remaining_stones
+        return [i for i, take in enumerate(self.actions) if take <= remaining_stones]
 
-    def get_child_state(self, action):
-        self.remaining_stones -= action
+    def get_child_state(self, encoded_state, action):
+        nim_state = self._decode_state(encoded_state)
+        take = self.actions[action]
+        return self._encode_state(NimState(
+            player_to_move=(nim_state.player_to_move + 1) % 2,
+            remaining_stones= nim_state.remaining_stones - take,
+        ))
 
-        # TODO: should we not advance player if we're in a terminal state?
-        self.advance_player()
-
-        return self.encode_state()
-
-    def get_state_reward(self):
-        if not self.is_current_state_terminal():
+    def get_state_reward(self, state):
+        if not self.is_state_terminal(state):
             return 0.0
-
-        # if we're in a terminal state, that means the last player that made a move made the winning move (we have to
-        # advance the current player to move because the game automatically moves on to the next player even in a
-        # terminal state)
-        self.advance_player()
-
-        winner = self.player_to_move()
+        # the winner is the player who made the move that led to this state
+        winner = (self._decode_state(state).player_to_move + 1) % 2
 
         # notice in Nim a draw is not possible
         if winner == 0:
@@ -90,26 +87,32 @@ class Nim(Game):
         elif winner == 1:
             return -1.0
 
-    def player_to_move(self):
-        return self.current_player
+    def player_to_move(self, encoded_state):
+        return self._decode_state(encoded_state).player_to_move
 
-    def visualize(self):
-        # extremly bare-bones for now...
-        print(f"player to move: {self.player_to_move()}, remaining stones: {self.remaining_stones}")
+    def next_player_to_move(self, encoded_state):
+        return (self._decode_state(encoded_state).player_to_move + 1) % 2
+
+    def visualize(self, encoded_state):
+        print(self._decode_state(encoded_state))
 
 
 if __name__ == '__main__':
-    g = Nim(stones=5, max_take=3)
+    g = Nim(stones=6, max_take=2)
     print("solving game with random walk")
-    print("initial state", g.init_game())
-    print("first player is", g.player_to_move())
-    while not g.is_current_state_terminal():
+    state = g.get_initial_state()
+    print("initial state", state)
+    print("first player is", g.player_to_move(state))
+    while not g.is_state_terminal(state):
         print("visualizing current state...")
-        g.visualize()
-        print("player to move", g.player_to_move())
-        a = g.get_legal_actions()
+        g.visualize(state)
+        print("player to move", g.player_to_move(state))
+        a = g.get_legal_actions(state)
         print("actions", a)
+        if g.is_state_terminal(state):
+            break
         to_take = a[np.random.choice(np.arange(len(a)))]
         print("taking action", to_take)
-        print("resulted in state", g.get_child_state(to_take))
-    print("reward", g.get_state_reward())
+        state = g.get_child_state(state, to_take)
+        print("resulted in state", state)
+    print("reward", g.get_state_reward(state))

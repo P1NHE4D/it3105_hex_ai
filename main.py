@@ -10,25 +10,28 @@ from rl.agent import Agent
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def sample_game(game, agent):
+def sample_game(game, agent, num_games=100):
     wins = 0
     losses = 0
-    for _ in range(10):
-        state = game.init_game()
-        while not game.is_current_state_terminal():
-            action = agent.propose_action(state, game.get_legal_actions())
-            game.get_child_state(action)
-            game.visualize()
-            if game.is_current_state_terminal():
+    for i in range(num_games):
+        print(f"SAMPLE GAME {i}/{num_games}")
+        state = game.get_initial_state()
+        while not game.is_state_terminal(state):
+            action = agent.propose_action(state, game.get_legal_actions(state))
+            state = game.get_child_state(state, action)
+            game.visualize(state)
+            if game.is_state_terminal(state):
                 break
-            action_idx = np.random.choice(np.arange(len(game.get_legal_actions())))
-            action = game.get_legal_actions()[action_idx]
-            state = game.get_child_state(action)
-            game.visualize()
-        reward = game.get_state_reward()
+            action_idx = np.random.choice(np.arange(len(game.get_legal_actions(state))))
+            action = game.get_legal_actions(state)[action_idx]
+            state = game.get_child_state(state, action)
+            game.visualize(state)
+        reward = game.get_state_reward(state)
         if reward == 1.0:
+            print("player 0 win!")
             wins += 1
         elif reward == -1.0:
+            print("player 1 win!")
             losses += 1
     print("wins {} | losses {}".format(wins, losses))
 
@@ -40,7 +43,10 @@ def main():
             config = safe_load(stream)
         except YAMLError as exc:
             print(exc)
-    game = Hex(3)
+    game = Nim(
+        stones=4,
+        max_take=2,
+    )
     agent = Agent(config=config.get("agent", {}), game=game)
 
     # sample_game(game, agent)
