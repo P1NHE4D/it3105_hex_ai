@@ -24,7 +24,7 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def is_state_terminal(self):
+    def is_state_terminal(self, state):
         """
         Returns True if the current state is terminal, and False otherwise. A state is terminal if the game is over
         """

@@ -2,7 +2,6 @@ import os
 from rl.mcts import MCTS
 from keras.models import Sequential, Model
 from keras.layers import Dense, Softmax
-from keras.activations import sigmoid
 from keras.callbacks import Callback
 from tensorflow import keras
 from tqdm import tqdm
@@ -56,8 +55,8 @@ class Agent:
             state = self.game.get_initial_state()
             while not self.game.is_state_terminal(state):
                 distribution = self.mcts_tree.simulate(state=state, num_sim=self.num_sim)
-                rbuf_x.appendleft(state)
-                rbuf_y.appendleft(distribution)
+                rbuf_x.append(state)
+                rbuf_y.append(distribution)
                 action_idx = np.argmax(distribution)
                 state = self.game.get_child_state(state, action_idx)
                 self.mcts_tree.retain_subtree(action_idx)
