@@ -115,7 +115,8 @@ class MCTS:
         :return: obtained reward
         """
         while not self.game.is_state_terminal(state):
-            action = self.agent.propose_action(state, self.game.get_legal_actions(state))
+            #action = self.agent.propose_action(state, self.game.get_legal_actions(state))
+            action = np.random.choice(self.game.get_legal_actions(state))
             state = self.game.get_child_state(state, action)
         return self.game.get_state_reward(state)
 

@@ -1,6 +1,6 @@
 agent:
-  episodes: 100
-  num_sim: 1000
+  episodes: 50
+  num_sim: 200
   save_interval: 10
   rbuf_size: 100
   anet:

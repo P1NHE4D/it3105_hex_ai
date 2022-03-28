@@ -43,10 +43,7 @@ def main():
             config = safe_load(stream)
         except YAMLError as exc:
             print(exc)
-    game = Nim(
-        stones=8,
-        max_take=2,
-    )
+    game = Hex(4)
     agent = Agent(config=config.get("agent", {}), game=game)
 
     # sample_game(game, agent)
