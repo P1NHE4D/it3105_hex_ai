@@ -31,13 +31,27 @@ class MCTSNode:
 
 
 class MCTS:
+    """
+    MCTS on Game, using default_policy during rollout. The major methods are 'simulate' and 'retain_subtree'. The rest
+    is for internal use.
 
-    def __init__(self, config, agent, game):
+    :param config: mcts config
+    :param game: game we are performing simulations on
+    :param default_policy: must be a lambda taking a state and a list of legal actions as input, and returning a single
+                           action from that list
+    """
+
+    def __init__(
+            self,
+            config,
+            game: Game,
+            default_policy,
+    ):
         self.root = None
-        self.agent = agent
         self.c = config.get("c", 1.0)
         self.exp_prob = config.get("exp_prob", 1.0)
         self.game = game
+        self.default_policy = default_policy
 
     def simulate(self, state, num_sim):
         """
@@ -107,16 +121,19 @@ class MCTS:
 
         return node.children[child_idx]
 
-    def rollout(self, state):
+    def rollout(
+            self,
+            state,
+    ):
         """
-        Performs a rollout of the current game until a terminal state is reached
+        Performs a rollout of the current game until a terminal state is reached.
 
-        :param game: game instance
+        :param state: perform rollout from this state
+        :param default_policy: when picking an action from a set of legal actions in a state, use this policy
         :return: obtained reward
         """
         while not self.game.is_state_terminal(state):
-            #action = self.agent.propose_action(state, self.game.get_legal_actions(state))
-            action = np.random.choice(self.game.get_legal_actions(state))
+            action = self.default_policy(state, self.game.get_legal_actions(state))
             state = self.game.get_child_state(state, action)
         return self.game.get_state_reward(state)
 
@@ -175,8 +192,8 @@ if __name__ == '__main__':
         )
         mcts = MCTS(
             config={},
-            agent=None,
             game=game,
+            default_policy=lambda _, legal_actions: legal_actions[0],
         )
         print(mcts.simulate(game.get_initial_state(), num_sim=5000))
     if False:

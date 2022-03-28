@@ -3,6 +3,7 @@ agent:
   num_sim: 200
   save_interval: 10
   rbuf_size: 100
+  default_policy: "agent"
   anet:
     learning_rate: 0.01
     epochs: 1
