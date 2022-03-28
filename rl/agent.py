@@ -39,6 +39,13 @@ class Agent:
             learning_rate=anet_config.get("learning_rate", 0.01),
             weight_file=anet_config.get("weight_file", None)
         )
+        if config.get('default_policy') == 'uniform':
+            self.mcts_default_policy = lambda _, legal_actions: np.random.choice(legal_actions)
+        elif config.get('default_policy') == 'agent':
+            self.mcts_default_policy = lambda state, legal_actions: self.propose_action(state, legal_actions)
+        else:
+            raise ValueError('invalid default_policy conig')
+
         self.mcts_tree = None
 
     def train(self):
@@ -50,7 +57,7 @@ class Agent:
         progress = tqdm(range(self.episodes), desc="Episode")
         for episode in progress:
             # reset mcts tree
-            self.mcts_tree = MCTS(config=self.mcts_config, agent=self, game=self.game)
+            self.mcts_tree = MCTS(config=self.mcts_config, game=self.game, default_policy=self.mcts_default_policy)
 
             state = self.game.get_initial_state()
             while not self.game.is_state_terminal(state):
@@ -127,7 +134,7 @@ class ANET(Model):
         self.model = Sequential(layers)
         self.compile(
             optimizer=configure_optimizer(optimizer, learning_rate),
-            loss=keras.losses.binary_crossentropy
+            loss=keras.losses.kl_divergence,
         )
         self.model_trained = False
         try:
