@@ -43,12 +43,24 @@ def matrix_cells(matrix):
 class Hex(Game):
 
     def get_initial_state(self):
+        """
+        Returns a one-hot encoded representation of the initial state
+
+        One hot encoding representation:
+        - first two digits indicate current player: [10...] player one, [01....] player two
+        - remaining digits encode each cell state with 2 bits per cell: [...00...] empty,
+          [...10...] player one, [...01...] player two
+        - length of ohe vector is 2 + 2 * board_size * board_size
+
+        :return: one-hot encoded representation of the initial state
+        """
         return self._encode_state(HexBoardState(
             player_to_move=0,
             board=construct_hex_board(self.board_size),
         ))
 
     def is_state_terminal(self, encoded):
+        # we can do this because Hex doesn't have ties
         return self.get_state_reward(encoded) != 0
 
     def player_to_move(self, encoded):
@@ -88,53 +100,8 @@ class Hex(Game):
 
     def __init__(self, board_size):
         super().__init__()
-        self.board = construct_hex_board(board_size)
-        self.ohe_board: list = []
         self.board_size = board_size
-        self.legal_actions: list = []
         self.all_actions = [(row, col) for row in range(self.board_size) for col in range(self.board_size)]
-        self.state = HexWinState.UNDECIDED
-        self.current_player = 0
-
-    def advance_player(self):
-        self.current_player = (self.current_player + 1) % 2
-
-    def init_game(self):
-        """
-        Resets the game board and returns a one-hot encoded representation of the initial state
-
-        One hot encoding representation:
-        - first two digits indicate current player: [10...] player one, [01....] player two
-        - remaining digits encode each cell state with 2 bits per cell: [...00...] empty,
-          [...10...] player one, [...01...] player two
-        - length of ohe vector is 2 + 2 * board_size * board_size
-
-        :return: one-hot encoded representation of the initial state
-        """
-        # reset all cells of the board
-        for node in self.board.flatten():
-            node.state = HexCellState.EMPTY
-
-        # initialize new one hot encoding
-        self.ohe_board = np.zeros(2 + 2 * self.board_size ** 2)
-        self.ohe_board[self.current_player] = 1
-
-        # reset actions
-        self.legal_actions = self.all_actions.copy()
-
-        # reset game state
-        self.state = HexWinState.UNDECIDED
-
-        return self.ohe_board
-
-    def get_current_state(self):
-        return self.ohe_board
-
-    def is_current_state_terminal(self):
-        """
-        :return: True if terminal, otherwise False
-        """
-        return self.state == HexWinState.PLAYER_ONE_WON or self.state == HexWinState.PLAYER_TWO_WON
 
     def get_legal_actions(self, encoded):
         """
@@ -145,16 +112,6 @@ class Hex(Game):
             i for i, rowcol in enumerate(self.all_actions)
             if decoded.board[rowcol[0]][rowcol[1]].state == HexCellState.EMPTY
         ]
-
-    def get_action_length(self):
-        return len(self.all_actions)
-
-    def get_action_index(self, action):
-        row, col = action
-        return row * self.board_size + col
-
-    def get_action_by_index(self, index):
-        return self.all_actions[index]
 
     def get_child_state(self, encoded, action_idx):
         """
@@ -170,68 +127,62 @@ class Hex(Game):
         decoded.player_to_move = (decoded.player_to_move + 1) % 2
         return self._encode_state(decoded)
 
-    def connected_lines(self, state, row, col, visited=None):
+    def connected_lines(self, state, row, col, visited=set()):
         """
-        Computes the number of connected lines (rows if player 1, columns if player 2)
+        Computes the number of connected lines (rows if player 1, columns if player 2). For example: if this returns 2
+        when the cell at row,col is player 1, it means that there is a connection between 2 rows involving row,col.
 
-        Should only be called for non-empty row,col
+        Should only be called for non-empty row,col, as an empty cell will result in a noop, and a returned 1 (empty
+        cells are not connected to each other in this context)
 
-        :param row:
-        :param col:
-        :param visited: visited nodes
-        :return: returns a set containing the indices of the connected lines
+        :param row: row of cell to search from
+        :param col: col of cell to search from
+        :param visited: visited nodes that will be excluded from search
+        :return: returns a set containing the indices of the connected lines, along with a set containing the (row, col)
+                 visited during the search
         """
-
-        if visited is None:
-            visited = set()
-
         lines = set()
         cell_val = state.board[row, col].state
-        if cell_val == HexCellState.PLAYER_ONE:
+        if cell_val == HexCellState.EMPTY:
+            raise ValueError('calling connected_lines on an empty cell never makes sense. Programmer error')
+        elif cell_val == HexCellState.PLAYER_ONE:
             lines.add(row)
-        else:
+        elif cell_val == HexCellState.PLAYER_TWO:
             lines.add(col)
+        else:
+            raise ValueError('Unknown cell state encountered in connected_lines')
+
         visited.add((row, col))
         for neighbour in state.board[row, col].neighbours:
             neighbour_row, neighbour_col = neighbour
             if state.board[neighbour_row, neighbour_col].state == cell_val and (
                     neighbour_row, neighbour_col) not in visited:
-                lines = lines.union(self.connected_lines(state, neighbour_row, neighbour_col, visited))
+                neighbour_connected_lines, neighbour_visited = self.connected_lines(state, neighbour_row, neighbour_col, visited)
+                lines = lines.union(neighbour_connected_lines)
+                visited = visited.union(neighbour_visited)
 
-        return lines
-
-
-    def update_game_state(self, row, col):
-        """
-        Checks if any player achieved building a connection from one end to the other
-        and updates the game state accordingly.
-        Conducting a check after each turn is computationally more efficient than checking
-        the entire board upon calling the is_state_terminal function.
-
-        :param row: row of the placed piece
-        :param col: column of the placed piece
-        """
-
-        # player one wins if pieces are connected over all rows
-        # player two wins if pieces are connected over all columns
-        if len(self.connected_lines(HexBoardState(
-            player_to_move=self.current_player,
-            board=self.board,
-        ), row, col)) == self.board_size:
-            if self.current_player == 0:
-                self.state = HexWinState.PLAYER_ONE_WON
-            else:
-                self.state = HexWinState.PLAYER_TWO_WON
+        return lines, visited
 
     def get_state_reward(self, encoded):
         decoded = self._decode_state(encoded)
+        visited = set()
         for row, col, cell in matrix_cells(decoded.board):
-            if cell.state != HexCellState.EMPTY and len(self.connected_lines(decoded, row, col, visited=None)) == self.board_size:
-                return 1 if decoded.player_to_move == 1 else -1
+            if cell.state != HexCellState.EMPTY:
+                # given a non-empty cell on the board, count how close the connected subgraph containing that cell is
+                # to forming a line spanning every row or column, depending on player color inhabited by the cell.
+                # Retain cells visited during this search, so we can skip them in later iterations (their subgraph
+                # has already been searched) Performance note: there's no need to run this on inner cells of the
+                # board, but due to the memoization of visited cells the performance difference should be totally
+                # negligible
+                num_connected, cell_visited = self.connected_lines(decoded, row, col, visited=visited)
+                visited = visited.union(cell_visited)
+                if len(num_connected) == self.board_size:
+                    return 1 if decoded.player_to_move == 1 else -1
+        # Hex cannot end in a tie, so getting here must mean the game is not over yet
         return 0
 
-    def visualize(self, state):
-        board = self._decode_state(state).board
+    def visualize(self, encoded):
+        board = self._decode_state(encoded).board
         g = nx.Graph()
         for row, hex_row in enumerate(board):
             for col, node in enumerate(hex_row):
@@ -344,7 +295,7 @@ def get_cell_neighbours(row, col, board_size):
 
 
 if __name__ == '__main__':
-    h = Hex(5)
+    h = Hex(8)
     state = h.get_initial_state()
     while not h.is_state_terminal(state):
         actions = h.get_legal_actions(state)

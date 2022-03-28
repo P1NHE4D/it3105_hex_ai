@@ -19,13 +19,15 @@ def sample_game(game, agent, num_games=100):
         while not game.is_state_terminal(state):
             action = agent.propose_action(state, game.get_legal_actions(state))
             state = game.get_child_state(state, action)
-            game.visualize(state)
             if game.is_state_terminal(state):
                 break
             action_idx = np.random.choice(np.arange(len(game.get_legal_actions(state))))
             action = game.get_legal_actions(state)[action_idx]
             state = game.get_child_state(state, action)
-            game.visualize(state)
+
+        # viz final state
+        game.visualize(state)
+
         reward = game.get_state_reward(state)
         if reward == 1.0:
             print("player 0 win!")
@@ -43,7 +45,7 @@ def main():
             config = safe_load(stream)
         except YAMLError as exc:
             print(exc)
-    game = Hex(4)
+    game = Hex(3)
     agent = Agent(config=config.get("agent", {}), game=game)
 
     # sample_game(game, agent)
