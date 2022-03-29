@@ -1,13 +1,13 @@
 import dataclasses
-
 import numpy as np
-
 from game.interface import Game
+
 
 @dataclasses.dataclass
 class NimState:
     player_to_move: int
     remaining_stones: int
+
 
 class Nim(Game):
 
@@ -32,7 +32,7 @@ class Nim(Game):
         self.max_take = max_take
 
         # materialized list of all possible actions, to be filtered and indexed into
-        self.actions = list(np.arange(1, self.max_take+1))
+        self.actions = list(np.arange(1, self.max_take + 1))
 
     def get_initial_state(self):
         return self._encode_state(NimState(
@@ -43,17 +43,17 @@ class Nim(Game):
     def number_of_actions(self):
         return self.max_take
 
-    def _encode_state(self, nim_state: NimState):
+    def _encode_state(self, decoded: NimState):
         encoding = np.ones(1 + self.stones)
-        encoding[0] = nim_state.player_to_move
-        stones_taken = self.stones - nim_state.remaining_stones
+        encoding[0] = decoded.player_to_move
+        stones_taken = self.stones - decoded.remaining_stones
         encoding[np.arange(1, stones_taken + 1)] = 0
         return encoding
 
-    def _decode_state(self, encoded_state) -> NimState:
-        player_to_move = encoded_state[0]
+    def _decode_state(self, encoded) -> NimState:
+        player_to_move = encoded[0]
         # https://stackoverflow.com/a/25032853
-        taken_stones = np.searchsorted(encoded_state[1:], 1)
+        taken_stones = np.searchsorted(encoded[1:], 1)
         remaining_stones = self.stones - taken_stones
         return NimState(
             player_to_move=player_to_move,
@@ -67,12 +67,12 @@ class Nim(Game):
         remaining_stones = self._decode_state(state).remaining_stones
         return [i for i, take in enumerate(self.actions) if take <= remaining_stones]
 
-    def get_child_state(self, encoded_state, action):
-        nim_state = self._decode_state(encoded_state)
+    def get_child_state(self, state, action):
+        nim_state = self._decode_state(state)
         take = self.actions[action]
         return self._encode_state(NimState(
             player_to_move=(nim_state.player_to_move + 1) % 2,
-            remaining_stones= nim_state.remaining_stones - take,
+            remaining_stones=nim_state.remaining_stones - take,
         ))
 
     def get_state_reward(self, state):
@@ -87,14 +87,14 @@ class Nim(Game):
         elif winner == 1:
             return -1.0
 
-    def player_to_move(self, encoded_state):
-        return self._decode_state(encoded_state).player_to_move
+    def player_to_move(self, state):
+        return self._decode_state(state).player_to_move
 
-    def next_player_to_move(self, encoded_state):
-        return (self._decode_state(encoded_state).player_to_move + 1) % 2
+    def next_player_to_move(self, state):
+        return (self._decode_state(state).player_to_move + 1) % 2
 
-    def visualize(self, encoded_state):
-        print(self._decode_state(encoded_state))
+    def visualize(self, state):
+        print(self._decode_state(state))
 
 
 if __name__ == '__main__':

@@ -31,7 +31,7 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def get_legal_actions(self):
+    def get_legal_actions(self, state):
         """
         Returns a list of legal actions
         """
@@ -52,7 +52,7 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def next_player_to_move(self):
+    def next_player_to_move(self, state):
         """
         Returns for a state which player should make a move after a move is taken
         """
