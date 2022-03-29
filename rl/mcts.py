@@ -46,12 +46,14 @@ class MCTS:
             config,
             game: Game,
             default_policy,
+            epsilon
     ):
         self.root = None
         self.c = config.get("c", 1.0)
         self.exp_prob = config.get("exp_prob", 1.0)
         self.game = game
         self.default_policy = default_policy
+        self.epsilon = epsilon
 
     def simulate(self, state, num_sim):
         """
@@ -133,7 +135,12 @@ class MCTS:
         :return: obtained reward
         """
         while not self.game.is_state_terminal(state):
-            action = self.default_policy(state, self.game.get_legal_actions(state))
+            if np.random.choice([True, False], p=[self.epsilon, 1 - self.epsilon]):
+                actions = self.game.get_legal_actions(state)
+                action_idx = np.random.choice(np.arange(0, actions))
+                action = actions[action_idx]
+            else:
+                action = self.default_policy(state, self.game.get_legal_actions(state))
             state = self.game.get_child_state(state, action)
         return self.game.get_state_reward(state)
 

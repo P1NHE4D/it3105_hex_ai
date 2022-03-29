@@ -32,6 +32,8 @@ class Agent:
         self.batch_size = anet_config.get("batch_size", 100)
         self.file_path = anet_config.get("file_path", f"{ROOT_DIR}/rl/models")
         self.dynamic_sim = config.get("dynamic_sim", False)
+        self.epsilon = config.get("epsilon", 0)
+        self.epsilon_decay = config.get("epsilon_decay", 1)
         self.game = game
         self.anet = ANET(
             hidden_layers=anet_config.get("hidden_layers", [(32, "relu")]),
@@ -56,10 +58,15 @@ class Agent:
         rbuf_x = deque(maxlen=self.rbuf_size)
         rbuf_y = deque(maxlen=self.rbuf_size)
         progress = tqdm(range(self.episodes), desc="Episode")
-        total_loss = []
+        history = LossHistory()
         for episode in progress:
             # reset mcts tree
-            self.mcts_tree = MCTS(config=self.mcts_config, game=self.game, default_policy=self.mcts_default_policy)
+            self.mcts_tree = MCTS(
+                config=self.mcts_config,
+                game=self.game,
+                default_policy=self.mcts_default_policy,
+                epsilon=self.epsilon
+            )
 
             state = self.game.get_initial_state()
             while not self.game.is_state_terminal(state):
@@ -74,17 +81,18 @@ class Agent:
                 state = self.game.get_child_state(state, action_idx)
                 self.mcts_tree.retain_subtree(action_idx)
 
-            history = LossHistory()
             self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
                           verbose=3, callbacks=[history])
             if episode % self.save_interval == 0:
                 self.anet.save_weights(filepath=f"{self.file_path}/anet_episode_{episode}")
 
-            total_loss.append(history.losses)
+            self.epsilon *= self.epsilon_decay
+
             progress.set_description(
                 "Batch loss: {:.4f}".format(history.losses[-1]) +
-                " | Average loss: {:.4f}".format(np.mean(total_loss)) +
-                " | RBUF Size: {}".format(len(rbuf_x))
+                " | Average loss: {:.4f}".format(np.mean(history.losses)) +
+                " | RBUF Size: {}".format(len(rbuf_x)) +
+                " | Epsilon: {}".format(self.epsilon)
             )
 
     def propose_action(self, state, actions):
@@ -112,9 +120,6 @@ class LossHistory(Callback):
 
     def __init__(self):
         super().__init__()
-        self.losses = []
-
-    def on_train_begin(self, logs=None):
         self.losses = []
 
     def on_batch_end(self, batch, logs=None):
