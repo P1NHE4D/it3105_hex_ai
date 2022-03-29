@@ -45,7 +45,7 @@ class Agent:
         elif config.get('default_policy') == 'agent':
             self.mcts_default_policy = lambda state, legal_actions: self.propose_action(state, legal_actions)
         else:
-            raise ValueError('invalid default_policy conig')
+            raise ValueError('invalid default_policy config')
 
         self.mcts_tree = None
 
