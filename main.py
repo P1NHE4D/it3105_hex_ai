@@ -6,7 +6,7 @@ from yaml import safe_load, YAMLError
 
 from game.hex import Hex
 from game.nim import Nim
-from rl.agent import Agent
+from rl.anet_agent import ANETAgent
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -48,7 +48,7 @@ def main():
         except YAMLError as exc:
             print(exc)
     game = Hex(7)
-    agent = Agent(config=config.get("agent", {}), game=game)
+    agent = ANETAgent(config=config.get("agent", {}), game=game)
 
     sample_game(game=game, agent=agent, plot=False)
 
