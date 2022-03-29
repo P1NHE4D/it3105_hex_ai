@@ -116,6 +116,9 @@ class Hex(Game):
             if decoded.board[rowcol[0]][rowcol[1]].state == HexCellState.EMPTY
         ]
 
+    def get_action(self, index):
+        return self.all_actions[index]
+
     def get_child_state(self, state, action):
         """
         Determines the child state based on the chosen action, returning

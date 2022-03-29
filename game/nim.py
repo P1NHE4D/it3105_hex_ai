@@ -43,6 +43,9 @@ class Nim(Game):
     def number_of_actions(self):
         return self.max_take
 
+    def get_action(self, index):
+        return self.actions[index]
+
     def _encode_state(self, decoded: NimState):
         encoding = np.ones(1 + self.stones)
         encoding[0] = decoded.player_to_move

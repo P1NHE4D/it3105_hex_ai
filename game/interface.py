@@ -66,6 +66,14 @@ class Game(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_action(self, index):
+        """
+        :param index: index of action
+        :return: action assigned to given index
+        """
+        pass
+
     def visualize(self, state):
         """
         Visualize state

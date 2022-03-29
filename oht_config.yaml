@@ -4,7 +4,7 @@ agent:
   save_interval: 10
   rbuf_size: 100
   default_policy: "agent"
-  dynamic_sim: true
+  dynamic_sim: false
   anet:
     learning_rate: 0.01
     epochs: 1
@@ -16,3 +16,6 @@ agent:
   mcts:
     c: 1
     exp_prob: 1.0
+oht:
+  token: ""
+  qualify: false
