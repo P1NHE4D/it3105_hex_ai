@@ -7,6 +7,8 @@ from yaml import safe_load, YAMLError
 from game.hex import Hex
 from game.nim import Nim
 from rl.anet_agent import ANETAgent
+from rl.topp import play_game
+from rl.uniform_agent import UniformAgent
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -16,23 +18,10 @@ def sample_game(game, agent, num_games=100, plot=False):
     losses = 0
     progress = tqdm(range(num_games), desc="Game")
     for _ in progress:
-        state = game.get_initial_state()
-        while not game.is_state_terminal(state):
-            action = agent.propose_action(state, game.get_legal_actions(state))
-            state = game.get_child_state(state, action)
-            if game.is_state_terminal(state):
-                break
-            action_idx = np.random.choice(np.arange(len(game.get_legal_actions(state))))
-            action = game.get_legal_actions(state)[action_idx]
-            state = game.get_child_state(state, action)
-
-        if plot:
-            game.visualize(state)
-
-        reward = game.get_state_reward(state)
-        if reward == 1.0:
+        winner = play_game(game, agent, UniformAgent(), visualize=plot)
+        if winner == 1:
             wins += 1
-        elif reward == -1.0:
+        elif winner == 2:
             losses += 1
         progress.set_description(
             "Wins: {} | Losses: {}".format(wins, losses) +
