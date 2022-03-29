@@ -1,16 +1,17 @@
 agent:
-  episodes: 10
-  num_sim: 1000
+  episodes: 50
+  num_sim: 200
   save_interval: 10
-  rbuf_size: 50
+  rbuf_size: 100
+  default_policy: "agent"
   anet:
     learning_rate: 0.01
     epochs: 1
-    batch_size: 500
+    batch_size: 10
     optimizer: "adam"
     hidden_layers: [
-      [64, "relu"],
+      [32, "relu"],
     ]
   mcts:
-    c: 100.0
-    exp_prob: 1
+    c: 1
+    exp_prob: 1.0

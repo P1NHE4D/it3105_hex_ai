@@ -3,78 +3,71 @@ from copy import deepcopy
 
 
 class Game(ABC):
-
-    def __init__(self, current_player=0, max_players=2):
-        self.current_player = current_player
-        self.max_players = max_players
-
-    def create_copy(self):
-        return deepcopy(self)
+    """
+    Abstraction which presents the ruleset of a 2-player game with deterministic actions as states, actions and rewards.
+    States are encoded as 1d numpy arrays of integers, and actions are encoded as integer indexes into the complete
+    list of all actions.
+    """
 
     @abstractmethod
-    def init_game(self):
+    def get_initial_state(self):
         """
-
-        :return: state_encoding
+        Initial state of a game
         """
         pass
 
     @abstractmethod
-    def get_current_state(self):
+    def get_child_state(self, state, action):
+        """
+        Resulting state when taking 'action' in 'state'
+        """
         pass
 
     @abstractmethod
-    def get_action_length(self):
-        pass
-
-    @abstractmethod
-    def get_action_index(self, action):
-        pass
-
-    @abstractmethod
-    def get_action_by_index(self, index):
-        pass
-
-    @abstractmethod
-    def is_current_state_terminal(self):
+    def is_state_terminal(self, state):
+        """
+        Returns True if the current state is terminal, and False otherwise. A state is terminal if the game is over
+        """
         pass
 
     @abstractmethod
     def get_legal_actions(self):
         """
-        :return: legal actions
+        Returns a list of legal actions
         """
         pass
 
     @abstractmethod
-    def get_child_state(self, action):
+    def get_state_reward(self, state):
         """
-        :return: state_encoding
+        Reward of the given state relative to the starting player (player 0)
         """
         pass
 
     @abstractmethod
-    def get_state_reward(self):
-        # blablabla 1 if player 1 win, -1 if other guy wins, 0 otherwise (draw)
+    def player_to_move(self, state):
+        """
+        Returns for a state which player should make a move next
+        """
         pass
 
     @abstractmethod
-    def visualize(self):
-        pass
-
-    def player_to_move(self):
-        """
-
-        :return: which player's turn it is. 0 or 1
-        """
-        return self.current_player
-
     def next_player_to_move(self):
         """
-
-        :return: which player's turn is it after an action is chosen. 0 or 1
+        Returns for a state which player should make a move after a move is taken
         """
-        return (self.current_player + 1) % self.max_players
+        pass
 
-    def advance_player(self):
-        self.current_player = self.next_player_to_move()
+    @abstractmethod
+    def number_of_actions(self):
+        """
+        Returns the length of the complete list of all actions. Given a response N, the caller can will know that
+        actions are in the interval [0,N)
+        """
+        pass
+
+    def visualize(self, state):
+        """
+        Visualize state
+        """
+        pass

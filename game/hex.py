@@ -1,9 +1,17 @@
+import dataclasses
 from enum import Enum
+from typing import Any
+
 from game.interface import Game
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
+@dataclasses.dataclass
+class HexBoardState:
+    player_to_move: int
+    # np.array of np.array of HexCellState
+    board: Any
 
 class HexCellState(Enum):
     EMPTY = 0
@@ -11,7 +19,7 @@ class HexCellState(Enum):
     PLAYER_TWO = 2
 
 
-class HexState(Enum):
+class HexWinState(Enum):
     UNDECIDED = 0
     PLAYER_ONE_WON = 1
     PLAYER_TWO_WON = 2
@@ -23,21 +31,20 @@ class HexCell:
         self.neighbours = neighbours
         self.state = HexCellState.EMPTY
 
+def matrix_cells(matrix):
+    """
+    Yield each cell of matrix, along with it's row and col (such that matrix[row, col] == cel)
+    """
+    for row, elements in enumerate(matrix):
+        for col, cell in enumerate(elements):
+            yield row, col, cell
+
 
 class Hex(Game):
 
-    def __init__(self, board_size):
-        super().__init__()
-        self.board = construct_hex_board(board_size)
-        self.ohe_board: list = []
-        self.board_size = board_size
-        self.legal_actions: list = []
-        self.all_actions = [(row, col) for row in range(self.board_size) for col in range(self.board_size)]
-        self.state = HexState.UNDECIDED
-
-    def init_game(self):
+    def get_initial_state(self):
         """
-        Resets the game board and returns a one-hot encoded representation of the initial state
+        Returns a one-hot encoded representation of the initial state
 
         One hot encoding representation:
         - first two digits indicate current player: [10...] player one, [01....] player two
@@ -47,48 +54,66 @@ class Hex(Game):
 
         :return: one-hot encoded representation of the initial state
         """
-        # reset all cells of the board
-        for node in self.board.flatten():
-            node.game_state = HexCellState.EMPTY
+        return self._encode_state(HexBoardState(
+            player_to_move=0,
+            board=construct_hex_board(self.board_size),
+        ))
 
-        # initialize new one hot encoding
-        self.ohe_board = np.zeros(2 + 2 * self.board_size ** 2)
-        self.ohe_board[self.current_player] = 1
+    def is_state_terminal(self, encoded):
+        # we can do this because Hex doesn't have ties
+        return self.get_state_reward(encoded) != 0
 
-        # reset actions
-        self.legal_actions = self.all_actions.copy()
+    def player_to_move(self, encoded):
+        return self._decode_state(encoded).player_to_move
 
-        # reset game state
-        self.state = HexState.UNDECIDED
+    def next_player_to_move(self, encoded):
+        return (self._decode_state(encoded).player_to_move + 1) % 2
 
-        return self.ohe_board
+    def number_of_actions(self):
+        return len(self.all_actions)
 
-    def get_current_state(self):
-        return self.ohe_board
+    def _encode_state(self, state: HexBoardState):
+        ohe_state = np.zeros(2 + 2 * self.board_size ** 2)
+        ohe_state[state.player_to_move] = 1
+        for row, col, cell in matrix_cells(state.board):
+            if cell.state != HexCellState.EMPTY:
+                player_offset = 0 if cell.state == HexCellState.PLAYER_ONE else 1
+                index = 2 + 2 * (row * self.board_size + col) + player_offset
+                ohe_state[index] = 1
+        return ohe_state
 
-    def is_current_state_terminal(self):
-        """
-        :return: True if terminal, otherwise False
-        """
-        return self.state == HexState.PLAYER_ONE_WON or self.state == HexState.PLAYER_TWO_WON
+    def _decode_state(self, ohe_state):
+        # assume either [0] or [1] is set to 1
+        player_to_move = 0 if ohe_state[0] == 1 else 1
+        board = construct_hex_board(self.board_size)
+        for row, col, cell in matrix_cells(board):
+            idx_player_0 = 2 + 2 * (row * self.board_size + col)
+            idx_player_1 = idx_player_0 + 1
+            if ohe_state[idx_player_0] == 1:
+                cell.state = HexCellState.PLAYER_ONE
+            elif ohe_state[idx_player_1] == 1:
+                cell.state = HexCellState.PLAYER_TWO
+        return HexBoardState(
+            player_to_move=player_to_move,
+            board=board,
+        )
 
-    def get_legal_actions(self):
+    def __init__(self, board_size):
+        super().__init__()
+        self.board_size = board_size
+        self.all_actions = [(row, col) for row in range(self.board_size) for col in range(self.board_size)]
+
+    def get_legal_actions(self, encoded):
         """
         :return: returns array comprising possible actions in current state
         """
-        return self.legal_actions
+        decoded = self._decode_state(encoded)
+        return [
+            i for i, rowcol in enumerate(self.all_actions)
+            if decoded.board[rowcol[0]][rowcol[1]].state == HexCellState.EMPTY
+        ]
 
-    def get_action_length(self):
-        return len(self.all_actions)
-
-    def get_action_index(self, action):
-        row, col = action
-        return row * self.board_size + col
-
-    def get_action_by_index(self, index):
-        return self.all_actions[index]
-
-    def get_child_state(self, action):
+    def get_child_state(self, encoded, action_idx):
         """
         Determines the child state based on the chosen action, returning
         a one-hot encoded successor state.
@@ -96,105 +121,91 @@ class Hex(Game):
         :param action: picked action
         :return: one-hot encoded successor state
         """
+        decoded = self._decode_state(encoded)
+        row, col = self.all_actions[action_idx]
+        decoded.board[row, col].state = HexCellState.PLAYER_ONE if decoded.player_to_move == 0 else HexCellState.PLAYER_TWO
+        decoded.player_to_move = (decoded.player_to_move + 1) % 2
+        return self._encode_state(decoded)
 
-        # set board state
-        row, col = action
-        self.board[row, col].game_state = HexCellState.PLAYER_ONE if self.current_player == 0 else HexCellState.PLAYER_TWO
-
-        # remove picked action from possible actions
-        self.legal_actions.remove((row, col))
-
-        self.update_game_state(row, col)
-
-        # update one hot encoding
-        ohe_index = 2 + 2 * (row * self.board_size + col)
-        if self.current_player == 1:
-            ohe_index += 1
-        self.ohe_board[ohe_index] = 1
-        self.ohe_board[self.current_player] = 0
-        self.advance_player()
-        self.ohe_board[self.current_player] = 1
-
-        return self.ohe_board
-
-    def update_game_state(self, row, col):
+    def connected_lines(self, state, row, col, visited=set()):
         """
-        Checks if any player achieved building a connection from one end to the other
-        and updates the game state accordingly.
-        Conducting a check after each turn is computationally more efficient than checking
-        the entire board upon calling the is_state_terminal function.
+        Computes the number of connected lines (rows if player 1, columns if player 2). For example: if this returns 2
+        when the cell at row,col is player 1, it means that there is a connection between 2 rows involving row,col.
 
-        :param row: row of the placed piece
-        :param col: column of the placed piece
+        Should only be called for non-empty row,col, as an empty cell will result in a noop, and a returned 1 (empty
+        cells are not connected to each other in this context)
+
+        :param row: row of cell to search from
+        :param col: col of cell to search from
+        :param visited: visited nodes that will be excluded from search
+        :return: returns a set containing the indices of the connected lines, along with a set containing the (row, col)
+                 visited during the search
         """
+        lines = set()
+        cell_val = state.board[row, col].state
+        if cell_val == HexCellState.EMPTY:
+            raise ValueError('calling connected_lines on an empty cell never makes sense. Programmer error')
+        elif cell_val == HexCellState.PLAYER_ONE:
+            lines.add(row)
+        elif cell_val == HexCellState.PLAYER_TWO:
+            lines.add(col)
+        else:
+            raise ValueError('Unknown cell state encountered in connected_lines')
 
-        def connected_lines(row, col, visited=None):
-            """
-            Computes the number of connected lines (rows if player 1, columns if player 2)
+        visited.add((row, col))
+        for neighbour in state.board[row, col].neighbours:
+            neighbour_row, neighbour_col = neighbour
+            if state.board[neighbour_row, neighbour_col].state == cell_val and (
+                    neighbour_row, neighbour_col) not in visited:
+                neighbour_connected_lines, neighbour_visited = self.connected_lines(state, neighbour_row, neighbour_col, visited)
+                lines = lines.union(neighbour_connected_lines)
+                visited = visited.union(neighbour_visited)
 
-            :param row:
-            :param col:
-            :param visited: visited nodes
-            :return: returns a set containing the indices of the connected lines
-            """
+        return lines, visited
 
-            if visited is None:
-                visited = set()
-
-            lines = set()
-            cell_val = HexCellState.PLAYER_ONE if self.current_player == 0 else HexCellState.PLAYER_TWO
-            if cell_val == HexCellState.PLAYER_ONE:
-                lines.add(row)
-            else:
-                lines.add(col)
-            visited.add((row, col))
-            for neighbour in self.board[row, col].neighbours:
-                neighbour_row, neighbour_col = neighbour
-                if self.board[neighbour_row, neighbour_col].game_state == cell_val and (
-                neighbour_row, neighbour_col) not in visited:
-                    lines = lines.union(connected_lines(neighbour_row, neighbour_col, visited))
-
-            return lines
-
-        # player one wins if pieces are connected over all rows
-        # player two wins if pieces are connected over all columns
-        if len(connected_lines(row, col)) == self.board_size:
-            if self.current_player == 0:
-                self.state = HexState.PLAYER_ONE_WON
-            else:
-                self.state = HexState.PLAYER_TWO_WON
-
-    def get_state_reward(self):
-        if self.state == HexState.PLAYER_ONE_WON:
-            return 1
-        if self.state == HexState.PLAYER_TWO_WON:
-            return -1
+    def get_state_reward(self, encoded):
+        decoded = self._decode_state(encoded)
+        visited = set()
+        for row, col, cell in matrix_cells(decoded.board):
+            if cell.state != HexCellState.EMPTY:
+                # given a non-empty cell on the board, count how close the connected subgraph containing that cell is
+                # to forming a line spanning every row or column, depending on player color inhabited by the cell.
+                # Retain cells visited during this search, so we can skip them in later iterations (their subgraph
+                # has already been searched) Performance note: there's no need to run this on inner cells of the
+                # board, but due to the memoization of visited cells the performance difference should be totally
+                # negligible
+                num_connected, cell_visited = self.connected_lines(decoded, row, col, visited=visited)
+                visited = visited.union(cell_visited)
+                if len(num_connected) == self.board_size:
+                    return 1 if decoded.player_to_move == 1 else -1
+        # Hex cannot end in a tie, so getting here must mean the game is not over yet
         return 0
 
-    def visualize(self):
+    def visualize(self, encoded):
+        board = self._decode_state(encoded).board
         g = nx.Graph()
-        for row, hex_row in enumerate(self.board):
+        for row, hex_row in enumerate(board):
             for col, node in enumerate(hex_row):
                 node_color = "white"
                 node_edge_color = "black"
-                if node.game_state == HexCellState.PLAYER_ONE:
+                if node.state == HexCellState.PLAYER_ONE:
                     node_color = "red"
                     node_edge_color = "red"
-                elif node.game_state == HexCellState.PLAYER_TWO:
+                elif node.state == HexCellState.PLAYER_TWO:
                     node_color = "black"
                 g.add_node("node_{}_{}".format(row, col), color=node_color, edge_color=node_edge_color)
 
         # cannot be integrated into the previous loop as this will mix up the order of the nodes
-        for row, hex_row in enumerate(self.board):
+        for row, hex_row in enumerate(board):
             for col, node in enumerate(hex_row):
                 for neighbour in node.neighbours:
                     edge_color = "black"
                     edge_weight = 1
-                    if node.game_state == self.board[neighbour].game_state:
-                        if node.game_state == HexCellState.PLAYER_ONE:
+                    if node.state == board[neighbour].state:
+                        if node.state == HexCellState.PLAYER_ONE:
                             edge_color = "red"
                             edge_weight = 4
-                        elif node.game_state == HexCellState.PLAYER_TWO:
+                        elif node.state == HexCellState.PLAYER_TWO:
                             edge_weight = 4
                     g.add_edge("node_{}_{}".format(row, col), "node_{}_{}".format(*neighbour), weight=edge_weight,
                                color=edge_color)
@@ -284,12 +295,12 @@ def get_cell_neighbours(row, col, board_size):
 
 
 if __name__ == '__main__':
-    h = Hex(5)
-    h.init_game()
-    while not h.is_current_state_terminal():
-        actions = h.get_legal_actions()
+    h = Hex(8)
+    state = h.get_initial_state()
+    while not h.is_state_terminal(state):
+        actions = h.get_legal_actions(state)
         action_idx = np.random.choice(np.arange(0, len(actions)))
         action = actions[action_idx]
-        h.get_child_state(action)
-    print("Player {} won.".format("one" if h.state == HexState.PLAYER_ONE_WON else "two"))
-    h.visualize()
+        state = h.get_child_state(state, action)
+    h.visualize(state)
+    print("Player {} won.".format("one" if h.get_state_reward(state) == 1 else "two"))
