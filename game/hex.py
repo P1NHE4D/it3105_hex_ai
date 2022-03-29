@@ -7,11 +7,13 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
+
 @dataclasses.dataclass
 class HexBoardState:
     player_to_move: int
     # np.array of np.array of HexCellState
     board: Any
+
 
 class HexCellState(Enum):
     EMPTY = 0
@@ -30,6 +32,7 @@ class HexCell:
     def __init__(self, neighbours):
         self.neighbours = neighbours
         self.state = HexCellState.EMPTY
+
 
 def matrix_cells(matrix):
     """
@@ -59,15 +62,15 @@ class Hex(Game):
             board=construct_hex_board(self.board_size),
         ))
 
-    def is_state_terminal(self, encoded):
+    def is_state_terminal(self, state):
         # we can do this because Hex doesn't have ties
-        return self.get_state_reward(encoded) != 0
+        return self.get_state_reward(state) != 0
 
-    def player_to_move(self, encoded):
-        return self._decode_state(encoded).player_to_move
+    def player_to_move(self, state):
+        return self._decode_state(state).player_to_move
 
-    def next_player_to_move(self, encoded):
-        return (self._decode_state(encoded).player_to_move + 1) % 2
+    def next_player_to_move(self, state):
+        return (self._decode_state(state).player_to_move + 1) % 2
 
     def number_of_actions(self):
         return len(self.all_actions)
@@ -103,17 +106,17 @@ class Hex(Game):
         self.board_size = board_size
         self.all_actions = [(row, col) for row in range(self.board_size) for col in range(self.board_size)]
 
-    def get_legal_actions(self, encoded):
+    def get_legal_actions(self, state):
         """
         :return: returns array comprising possible actions in current state
         """
-        decoded = self._decode_state(encoded)
+        decoded = self._decode_state(state)
         return [
             i for i, rowcol in enumerate(self.all_actions)
             if decoded.board[rowcol[0]][rowcol[1]].state == HexCellState.EMPTY
         ]
 
-    def get_child_state(self, encoded, action_idx):
+    def get_child_state(self, state, action):
         """
         Determines the child state based on the chosen action, returning
         a one-hot encoded successor state.
@@ -121,13 +124,14 @@ class Hex(Game):
         :param action: picked action
         :return: one-hot encoded successor state
         """
-        decoded = self._decode_state(encoded)
-        row, col = self.all_actions[action_idx]
-        decoded.board[row, col].state = HexCellState.PLAYER_ONE if decoded.player_to_move == 0 else HexCellState.PLAYER_TWO
+        decoded = self._decode_state(state)
+        row, col = self.all_actions[action]
+        decoded.board[
+            row, col].state = HexCellState.PLAYER_ONE if decoded.player_to_move == 0 else HexCellState.PLAYER_TWO
         decoded.player_to_move = (decoded.player_to_move + 1) % 2
         return self._encode_state(decoded)
 
-    def connected_lines(self, state, row, col, visited=set()):
+    def connected_lines(self, state, row, col, visited=None):
         """
         Computes the number of connected lines (rows if player 1, columns if player 2). For example: if this returns 2
         when the cell at row,col is player 1, it means that there is a connection between 2 rows involving row,col.
@@ -141,6 +145,8 @@ class Hex(Game):
         :return: returns a set containing the indices of the connected lines, along with a set containing the (row, col)
                  visited during the search
         """
+        if visited is None:
+            visited = set()
         lines = set()
         cell_val = state.board[row, col].state
         if cell_val == HexCellState.EMPTY:
@@ -157,14 +163,15 @@ class Hex(Game):
             neighbour_row, neighbour_col = neighbour
             if state.board[neighbour_row, neighbour_col].state == cell_val and (
                     neighbour_row, neighbour_col) not in visited:
-                neighbour_connected_lines, neighbour_visited = self.connected_lines(state, neighbour_row, neighbour_col, visited)
+                neighbour_connected_lines, neighbour_visited = self.connected_lines(state, neighbour_row, neighbour_col,
+                                                                                    visited)
                 lines = lines.union(neighbour_connected_lines)
                 visited = visited.union(neighbour_visited)
 
         return lines, visited
 
-    def get_state_reward(self, encoded):
-        decoded = self._decode_state(encoded)
+    def get_state_reward(self, state):
+        decoded = self._decode_state(state)
         visited = set()
         for row, col, cell in matrix_cells(decoded.board):
             if cell.state != HexCellState.EMPTY:
@@ -181,8 +188,8 @@ class Hex(Game):
         # Hex cannot end in a tie, so getting here must mean the game is not over yet
         return 0
 
-    def visualize(self, encoded):
-        board = self._decode_state(encoded).board
+    def visualize(self, state):
+        board = self._decode_state(state).board
         g = nx.Graph()
         for row, hex_row in enumerate(board):
             for col, node in enumerate(hex_row):

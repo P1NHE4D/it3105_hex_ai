@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+from tqdm import tqdm
 from yaml import safe_load, YAMLError
 
 from game.hex import Hex
@@ -10,11 +11,11 @@ from rl.agent import Agent
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def sample_game(game, agent, num_games=100):
+def sample_game(game, agent, num_games=100, plot=False):
     wins = 0
     losses = 0
-    for i in range(num_games):
-        print(f"SAMPLE GAME {i}/{num_games}")
+    progress = tqdm(range(num_games), desc="Game")
+    for _ in progress:
         state = game.get_initial_state()
         while not game.is_state_terminal(state):
             action = agent.propose_action(state, game.get_legal_actions(state))
@@ -25,17 +26,18 @@ def sample_game(game, agent, num_games=100):
             action = game.get_legal_actions(state)[action_idx]
             state = game.get_child_state(state, action)
 
-        # viz final state
-        game.visualize(state)
+        if plot:
+            game.visualize(state)
 
         reward = game.get_state_reward(state)
         if reward == 1.0:
-            print("player 0 win!")
             wins += 1
         elif reward == -1.0:
-            print("player 1 win!")
             losses += 1
-    print("wins {} | losses {}".format(wins, losses))
+        progress.set_description(
+            "Wins: {} | Losses: {}".format(wins, losses) +
+            " | WL-Ratio: {:.4f}% ".format((wins / (wins + losses)) * 100)
+        )
 
 
 def main():
@@ -48,11 +50,11 @@ def main():
     game = Hex(3)
     agent = Agent(config=config.get("agent", {}), game=game)
 
-    # sample_game(game, agent)
+    sample_game(game=game, agent=agent, plot=False)
 
     agent.train()
 
-    sample_game(game, agent)
+    sample_game(game=game, agent=agent, plot=False)
 
 
 if __name__ == '__main__':

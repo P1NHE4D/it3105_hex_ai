@@ -31,6 +31,7 @@ class Agent:
         self.epochs = anet_config.get("epochs", 10)
         self.batch_size = anet_config.get("batch_size", 100)
         self.file_path = anet_config.get("file_path", f"{ROOT_DIR}/rl/models")
+        self.dynamic_sim = config.get("dynamic_sim", False)
         self.game = game
         self.anet = ANET(
             hidden_layers=anet_config.get("hidden_layers", [(32, "relu")]),
@@ -61,7 +62,11 @@ class Agent:
 
             state = self.game.get_initial_state()
             while not self.game.is_state_terminal(state):
-                distribution = self.mcts_tree.simulate(state=state, num_sim=self.num_sim)
+                num_sim = self.num_sim
+                if self.dynamic_sim:
+                    actions = self.game.get_legal_actions(state=state)
+                    num_sim = max([len(actions) / self.num_sim, 10])
+                distribution = self.mcts_tree.simulate(state=state, num_sim=num_sim)
                 rbuf_x.append(state)
                 rbuf_y.append(distribution)
                 action_idx = np.argmax(distribution)
