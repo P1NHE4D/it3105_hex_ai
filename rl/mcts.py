@@ -137,7 +137,7 @@ class MCTS:
         while not self.game.is_state_terminal(state):
             if np.random.choice([True, False], p=[self.epsilon, 1 - self.epsilon]):
                 actions = self.game.get_legal_actions(state)
-                action_idx = np.random.choice(np.arange(0, actions))
+                action_idx = np.random.choice(np.arange(0, len(actions)))
                 action = actions[action_idx]
             else:
                 action = self.default_policy(state, self.game.get_legal_actions(state))
