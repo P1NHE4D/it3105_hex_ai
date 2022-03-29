@@ -57,8 +57,10 @@ class ANETAgent(Agent):
 
     def train(self):
         """
-        Learns an action policy by utilising monte carlo tree search simulations
+        Learns an action policy by utilising monte carlo tree search simulations. Returns a list of weight files saved
+        during training
         """
+        weight_files = []
         rbuf_x = deque(maxlen=self.rbuf_size)
         rbuf_y = deque(maxlen=self.rbuf_size)
         progress = tqdm(range(self.episodes), desc="Episode")
@@ -88,7 +90,9 @@ class ANETAgent(Agent):
             self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
                           verbose=3, callbacks=[history])
             if episode % self.save_interval == 0 or episode == self.episodes-1:
-                self.anet.save_weights(filepath=f"{self.file_path}/anet_episode_{episode}")
+                weight_file = f"{self.file_path}/anet_episode_{episode}"
+                self.anet.save_weights(filepath=weight_file)
+                weight_files.append(weight_file)
 
             self.epsilon *= self.epsilon_decay
 
@@ -98,6 +102,8 @@ class ANETAgent(Agent):
                 " | RBUF Size: {}".format(len(rbuf_x)) +
                 " | Epsilon: {}".format(self.epsilon)
             )
+
+        return weight_files
 
     def propose_action(self, state, legal_actions):
         """

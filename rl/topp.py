@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from tqdm import tqdm
+
 from game.hex import Hex
 from game.interface import Game
 from rl.agent import Agent
@@ -27,7 +29,7 @@ def play_game(game: Game, player_1: Agent, player_2: Agent, visualize=False):
         player_to_move = player_2 if player_to_move == player_1 else player_1
 
 
-def round_robin_tournament(game: Game, agents: list[tuple[str, ANETAgent]], num_games_per_series: int):
+def round_robin_tournament(game: Game, agents: list[tuple[str, Agent]], num_games_per_series: int, visualize=False):
     """
     Each agent competes with each other agent playing num_games_per_series games. Then the wins/losses statistics of
     each player is returned
@@ -36,23 +38,53 @@ def round_robin_tournament(game: Game, agents: list[tuple[str, ANETAgent]], num_
     wins = defaultdict(lambda: 0)
     losses = defaultdict(lambda: 0)
 
-    for i, (a_name, a_agent) in enumerate(agents[:-1]):
-        for b_name, b_agent in agents[i:]:
-            for j in range(num_games_per_series):
-                # in an attempt to be fair, alternate being the first player
-                if j % 2 == 0:
-                    winner_name = a_name if play_game(game, a_agent, b_agent) == 1 else b_name
-                else:
-                    winner_name = b_name if play_game(game, b_agent, a_agent) == 1 else a_name
-                loser_name = a_name if winner_name == b_name else b_name
+    # flexing my combinatorics B)
+    num_series = len(agents) * (len(agents) - 1) / 2
+    total_num_games = num_series * num_games_per_series
 
-                wins[winner_name] += 1
-                losses[loser_name] += 1
+    with tqdm(total=total_num_games) as pbar:
+        pbar.set_description("Playing tournament games")
+        for i, (a_name, a_agent) in enumerate(agents[:-1]):
+            for b_name, b_agent in agents[i+1:]:
+                for j in range(num_games_per_series):
+                    pbar.update(1)
+                    # in an attempt to be fair, alternate being the first player
+                    if j % 2 == 0:
+                        winner_name = a_name if play_game(game, a_agent, b_agent, visualize) == 1 else b_name
+                    else:
+                        winner_name = b_name if play_game(game, b_agent, a_agent, visualize) == 1 else a_name
+                    loser_name = a_name if winner_name == b_name else b_name
+
+                    wins[winner_name] += 1
+                    losses[loser_name] += 1
 
     return [
         (name, wins[name], losses[name])
         for name, _ in agents
     ]
+
+
+def anet_tournament(
+        game: Game,
+        weight_files: list[str],
+        num_games_per_series: int,
+        include_uniform: bool,
+        visualize: bool = False,
+):
+    """
+    Hold a game tournament of ANETAgents with weights loaded from provided weight files, optionally including a uniform
+    agent as a sanity check
+    """
+    named_agents = [
+        (weight_file, ANETAgent(game=game, config={'anet': {'weight_file': weight_file}}))
+        for weight_file in weight_files
+    ]
+    if include_uniform:
+        named_agents.append(('uniform', UniformAgent()))
+
+    results = round_robin_tournament(game, named_agents, num_games_per_series, visualize)
+    for name, wins, losses in results:
+        print(f"{name} WL-Ratio {wins / (wins + losses)}, WINS {wins} LOSSES {losses}")
 
 
 if __name__ == '__main__':
@@ -68,14 +100,14 @@ if __name__ == '__main__':
     h = Hex(4)
 
     agents = [
-        (weight_file, ANETAgent(game=h, config={'anet': {'weight_file': weight_file}}))
-        for weight_file in weight_files
-    ] + [
-        ('uniform', UniformAgent()),
-    ]
+                 (weight_file, ANETAgent(game=h, config={'anet': {'weight_file': weight_file}}))
+                 for weight_file in weight_files
+             ] + [
+                 ('uniform', UniformAgent()),
+             ]
 
     play_game(h, agents[-2][1], agents[-1][1], visualize=True)
 
     results = round_robin_tournament(h, agents, 25)
     for name, wins, losses in results:
-        print(name, wins/(wins+losses), wins, losses)
+        print(name, wins / (wins + losses), wins, losses)

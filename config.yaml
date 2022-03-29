@@ -8,6 +8,10 @@ agent:
   epsilon: 0
   epsilon_decay: 0.99
   anet:
+    # NOTE: when we start getting serious about training agents we should clearly separate between different games &
+    # configurations.. For now just dump them to the default folder. Comment is here to show how I would dump weights
+    # for a size 4 hex game
+    #file_path: "hex_4"
     learning_rate: 0.01
     epochs: 1
     batch_size: 10
@@ -18,3 +22,10 @@ agent:
   mcts:
     c: 1
     exp_prob: 1.0
+game:
+  name: "hex"
+  params:
+    board_size: 3
+topp:
+  include_uniform: true
+  num_games_per_series: 50
