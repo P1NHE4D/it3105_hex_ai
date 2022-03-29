@@ -83,7 +83,7 @@ class Agent:
             total_loss.append(history.losses)
             progress.set_description(
                 "Batch loss: {:.4f}".format(history.losses[-1]) +
-                " | Average loss: {:.4f}".format(total_loss) +
+                " | Average loss: {:.4f}".format(np.mean(total_loss)) +
                 " | RBUF Size: {}".format(len(rbuf_x))
             )
 
