@@ -86,12 +86,16 @@ class Hex(Game):
         return ohe_state
 
     def _decode_state(self, ohe_state):
-        # assume either [0] or [1] is set to 1
+        # != as xor
+        if not (bool(ohe_state[0]) != bool(ohe_state[1])):
+            raise ValueError('hex state encoding erroneous player-to-move')
         player_to_move = 0 if ohe_state[0] == 1 else 1
         board = construct_hex_board(self.board_size)
         for row, col, cell in matrix_cells(board):
             idx_player_0 = 2 + 2 * (row * self.board_size + col)
             idx_player_1 = idx_player_0 + 1
+            if ohe_state[idx_player_0] == 1 and ohe_state[idx_player_1] == 1:
+                raise ValueError('hex state encoding both players cannot occupy the same cell')
             if ohe_state[idx_player_0] == 1:
                 cell.state = HexCellState.PLAYER_ONE
             elif ohe_state[idx_player_1] == 1:
