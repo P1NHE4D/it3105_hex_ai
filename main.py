@@ -6,7 +6,9 @@ from yaml import safe_load, YAMLError
 
 from game.hex import Hex
 from game.nim import Nim
-from rl.agent import Agent
+from rl.anet_agent import ANETAgent
+from rl.topp import play_game, anet_tournament
+from rl.uniform_agent import UniformAgent
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -16,23 +18,10 @@ def sample_game(game, agent, num_games=100, plot=False):
     losses = 0
     progress = tqdm(range(num_games), desc="Game")
     for _ in progress:
-        state = game.get_initial_state()
-        while not game.is_state_terminal(state):
-            action = agent.propose_action(state, game.get_legal_actions(state))
-            state = game.get_child_state(state, action)
-            if game.is_state_terminal(state):
-                break
-            action_idx = np.random.choice(np.arange(len(game.get_legal_actions(state))))
-            action = game.get_legal_actions(state)[action_idx]
-            state = game.get_child_state(state, action)
-
-        if plot:
-            game.visualize(state)
-
-        reward = game.get_state_reward(state)
-        if reward == 1.0:
+        winner = play_game(game, agent, UniformAgent(), visualize=plot)
+        if winner == 1:
             wins += 1
-        elif reward == -1.0:
+        elif winner == 2:
             losses += 1
         progress.set_description(
             "Wins: {} | Losses: {}".format(wins, losses) +
@@ -41,21 +30,43 @@ def sample_game(game, agent, num_games=100, plot=False):
 
 
 def main():
+    # load config
     config = dict()
     with open("config.yaml", "r") as stream:
         try:
             config = safe_load(stream)
         except YAMLError as exc:
             print(exc)
-    game = Hex(7)
-    agent = Agent(config=config.get("agent", {}), game=game)
 
+    # configure game
+    # NOTE: no default values. expect user to make conscious decisions..
+    game_config = config["game"]
+    if game_config["name"] == "hex":
+        game = Hex(**game_config["params"])
+    elif game_config["name"] == "nim":
+        game = Nim(**game_config["params"])
+    else:
+        raise ValueError(f'unknown game {game_config["name"]}')
+
+    if config["topp"]["enabled"]:
+        # configure topp
+        # NOTE: no default values. expect user to make conscious decisions..
+        topp_params = config["topp"]["params"]
+        topp_num_sample_games = topp_params["num_games_per_series"]
+        topp_include_uniform = topp_params["include_uniform"]
+
+    # configure agent
+    agent = ANETAgent(config=config.get("agent", {}), game=game)
+
+    # train agent
+    sample_game(game=game, agent=agent, plot=False)
+    weight_files = agent.train()
     sample_game(game=game, agent=agent, plot=False)
 
-    agent.train()
-
-    sample_game(game=game, agent=agent, plot=False)
-
+    if config["topp"]["enabled"]:
+        # hold tournament with saved agents. Use the list passed from training instead of looking up weights in the
+        # folder ourselves because the folder could contain unrelated weights..
+        anet_tournament(game, weight_files, topp_num_sample_games, topp_include_uniform)
 
 if __name__ == '__main__':
     main()
