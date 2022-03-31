@@ -1,7 +1,7 @@
 import os
 from rl.mcts import MCTS
 from keras.models import Sequential, Model
-from keras.layers import Dense, Softmax
+from keras.layers import Dense
 from keras.callbacks import Callback
 from tensorflow import keras
 from tqdm import tqdm
@@ -75,9 +75,9 @@ class Agent:
                 distribution = self.mcts_tree.simulate(state=state, num_sim=num_sim)
                 rbuf_x.append(state)
                 rbuf_y.append(distribution)
-                action_idx = np.argmax(distribution)
-                state = self.game.get_child_state(state, action_idx)
-                self.mcts_tree.retain_subtree(action_idx)
+                action = np.argmax(distribution)
+                state = self.game.get_child_state(state, action)
+                self.mcts_tree.retain_subtree(action)
 
             self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
                           verbose=3, callbacks=[history])
@@ -139,8 +139,7 @@ class ANET(Model):
     def __init__(self, hidden_layers, output_nodes, optimizer, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
         layers = [Dense(nodes, activation=activation) for nodes, activation in hidden_layers]
-        layers.append(Dense(output_nodes))
-        layers.append(Softmax())
+        layers.append(Dense(output_nodes, activation="softmax"))
         self.model = Sequential(layers)
         self.compile(
             optimizer=configure_optimizer(optimizer, learning_rate),
