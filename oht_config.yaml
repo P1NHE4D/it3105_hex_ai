@@ -1,0 +1,11 @@
+agent:
+  anet:
+    optimizer: "adam"
+    hidden_layers: [
+      [32, "relu"],
+    ]
+    weight_file: ""
+oht:
+  token: ""
+  qualify: false
+  visualize: false

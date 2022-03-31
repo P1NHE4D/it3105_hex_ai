@@ -46,12 +46,14 @@ class MCTS:
             config,
             game: Game,
             default_policy,
+            epsilon
     ):
         self.root = None
         self.c = config.get("c", 1.0)
         self.exp_prob = config.get("exp_prob", 1.0)
         self.game = game
         self.default_policy = default_policy
+        self.epsilon = epsilon
 
     def simulate(self, state, num_sim):
         """
@@ -78,7 +80,7 @@ class MCTS:
                 simulation_state = self.game.get_child_state(simulation_state, node.action)
 
             # only expand if node is not terminal
-            expand_tree = np.random.choice([True, False], p=[self.exp_prob, 1 - self.exp_prob])
+            expand_tree = np.random.random() < self.exp_prob
             if expand_tree and not self.game.is_state_terminal(simulation_state):
                 node = self.expand(node, simulation_state)
                 simulation_state = self.game.get_child_state(simulation_state, node.action)
@@ -93,7 +95,7 @@ class MCTS:
                 node.cumulative_reward += reward
                 node = node.parent
 
-        return self.action_distribution(state, self.root)
+        return self.action_distribution(self.root)
 
     def tree_policy(self, node):
         """
@@ -129,18 +131,19 @@ class MCTS:
         Performs a rollout of the current game until a terminal state is reached.
 
         :param state: perform rollout from this state
-        :param default_policy: when picking an action from a set of legal actions in a state, use this policy
         :return: obtained reward
         """
         while not self.game.is_state_terminal(state):
-            action = self.default_policy(state, self.game.get_legal_actions(state))
+            if np.random.random() < self.epsilon:
+                action = np.random.choice(self.game.get_legal_actions(state))
+            else:
+                action = self.default_policy(state, self.game.get_legal_actions(state))
             state = self.game.get_child_state(state, action)
         return self.game.get_state_reward(state)
 
-    def action_distribution(self, state, node: MCTSNode):
+    def action_distribution(self, node: MCTSNode):
         """
         Computes an action distribution over all actions for the given node
-        :param state: game state
         :param node: node for which the distribution should be calculated
         :return: distribution over all actions
         """
@@ -160,6 +163,7 @@ class MCTS:
             if child.action == action:
                 self.root = child
                 self.root.parent = None
+                self.root.action = None
                 return
         raise ValueError('passed action does not correspond to a child of root')
 

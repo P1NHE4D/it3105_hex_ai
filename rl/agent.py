@@ -1,7 +1,7 @@
 import os
 from rl.mcts import MCTS
 from keras.models import Sequential, Model
-from keras.layers import Dense, Softmax
+from keras.layers import Dense
 from keras.callbacks import Callback
 from tensorflow import keras
 from tqdm import tqdm
@@ -32,6 +32,8 @@ class Agent:
         self.batch_size = anet_config.get("batch_size", 100)
         self.file_path = anet_config.get("file_path", f"{ROOT_DIR}/rl/models")
         self.dynamic_sim = config.get("dynamic_sim", False)
+        self.epsilon = config.get("epsilon", 0)
+        self.epsilon_decay = config.get("epsilon_decay", 1)
         self.game = game
         self.anet = ANET(
             hidden_layers=anet_config.get("hidden_layers", [(32, "relu")]),
@@ -42,10 +44,8 @@ class Agent:
         )
         if config.get('default_policy') == 'uniform':
             self.mcts_default_policy = lambda _, legal_actions: np.random.choice(legal_actions)
-        elif config.get('default_policy') == 'agent':
-            self.mcts_default_policy = lambda state, legal_actions: self.propose_action(state, legal_actions)
         else:
-            raise ValueError('invalid default_policy conig')
+            self.mcts_default_policy = lambda state, legal_actions: self.propose_action(state, legal_actions)
 
         self.mcts_tree = None
 
@@ -56,9 +56,15 @@ class Agent:
         rbuf_x = deque(maxlen=self.rbuf_size)
         rbuf_y = deque(maxlen=self.rbuf_size)
         progress = tqdm(range(self.episodes), desc="Episode")
+        history = LossHistory()
         for episode in progress:
             # reset mcts tree
-            self.mcts_tree = MCTS(config=self.mcts_config, game=self.game, default_policy=self.mcts_default_policy)
+            self.mcts_tree = MCTS(
+                config=self.mcts_config,
+                game=self.game,
+                default_policy=self.mcts_default_policy,
+                epsilon=self.epsilon
+            )
 
             state = self.game.get_initial_state()
             while not self.game.is_state_terminal(state):
@@ -69,20 +75,22 @@ class Agent:
                 distribution = self.mcts_tree.simulate(state=state, num_sim=num_sim)
                 rbuf_x.append(state)
                 rbuf_y.append(distribution)
-                action_idx = np.argmax(distribution)
-                state = self.game.get_child_state(state, action_idx)
-                self.mcts_tree.retain_subtree(action_idx)
+                action = np.argmax(distribution)
+                state = self.game.get_child_state(state, action)
+                self.mcts_tree.retain_subtree(action)
 
-            history = LossHistory()
             self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
                           verbose=3, callbacks=[history])
             if episode % self.save_interval == 0:
                 self.anet.save_weights(filepath=f"{self.file_path}/anet_episode_{episode}")
 
+            self.epsilon *= self.epsilon_decay
+
             progress.set_description(
                 "Batch loss: {:.4f}".format(history.losses[-1]) +
                 " | Average loss: {:.4f}".format(np.mean(history.losses)) +
-                " | RBUF Size: {}".format(len(rbuf_x))
+                " | RBUF Size: {}".format(len(rbuf_x)) +
+                " | Epsilon: {}".format(self.epsilon)
             )
 
     def propose_action(self, state, actions):
@@ -112,9 +120,6 @@ class LossHistory(Callback):
         super().__init__()
         self.losses = []
 
-    def on_train_begin(self, logs=None):
-        self.losses = []
-
     def on_batch_end(self, batch, logs=None):
         self.losses.append(logs.get('loss'))
 
@@ -134,8 +139,7 @@ class ANET(Model):
     def __init__(self, hidden_layers, output_nodes, optimizer, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
         layers = [Dense(nodes, activation=activation) for nodes, activation in hidden_layers]
-        layers.append(Dense(output_nodes))
-        layers.append(Softmax())
+        layers.append(Dense(output_nodes, activation="softmax"))
         self.model = Sequential(layers)
         self.compile(
             optimizer=configure_optimizer(optimizer, learning_rate),

@@ -4,7 +4,9 @@ agent:
   save_interval: 10
   rbuf_size: 100
   default_policy: "agent"
-  dynamic_sim: false
+  dynamic_sim: true
+  epsilon: 0
+  epsilon_decay: 0.99
   anet:
     learning_rate: 0.01
     epochs: 1
