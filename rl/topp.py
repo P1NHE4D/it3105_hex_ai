@@ -16,17 +16,19 @@ def play_game(game: Game, player_1: Agent, player_2: Agent, visualize=False):
     """
     state = game.get_initial_state()
     player_to_move = player_1
-    while True:
+    while not game.is_state_terminal(state):
         action = player_to_move.propose_action(state, game.get_legal_actions(state))
         state = game.get_child_state(state, action)
-        if game.is_state_terminal(state):
-            if visualize:
-                game.visualize(state)
-            reward = game.get_state_reward(state)
-            if reward == 0:
-                raise ValueError('Game ended in tie, but ties are not implemented for play_game')
-            return 1 if reward > 0 else 2
         player_to_move = player_2 if player_to_move == player_1 else player_1
+
+    reward = game.get_state_reward(state)
+    if reward == 0:
+        raise ValueError('Game ended in tie, but ties are not implemented for play_game')
+
+    if visualize:
+        game.visualize(state)
+
+    return 1 if reward > 0 else 2
 
 
 def round_robin_tournament(game: Game, agents: list[tuple[str, Agent]], num_games_per_series: int, visualize=False):
