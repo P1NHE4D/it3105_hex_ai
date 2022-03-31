@@ -27,5 +27,8 @@ game:
   params:
     board_size: 3
 topp:
-  include_uniform: true
-  num_games_per_series: 50
+  enabled: true
+  # params irrelevant if enabled is false
+  params:
+    include_uniform: true
+    num_games_per_series: 50

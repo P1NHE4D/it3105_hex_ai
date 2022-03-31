@@ -48,11 +48,12 @@ def main():
     else:
         raise ValueError(f'unknown game {game_config["name"]}')
 
-    # configure topp
-    # NOTE: no default values. expect user to make conscious decisions..
-    topp_config = config["topp"]
-    topp_num_sample_games = topp_config["num_games_per_series"]
-    topp_include_uniform = topp_config["include_uniform"]
+    if config["topp"]["enabled"]:
+        # configure topp
+        # NOTE: no default values. expect user to make conscious decisions..
+        topp_params = config["topp"]["params"]
+        topp_num_sample_games = topp_params["num_games_per_series"]
+        topp_include_uniform = topp_params["include_uniform"]
 
     # configure agent
     agent = ANETAgent(config=config.get("agent", {}), game=game)
@@ -62,9 +63,10 @@ def main():
     weight_files = agent.train()
     sample_game(game=game, agent=agent, plot=False)
 
-    # hold tournament with saved agents. Use the list passed from training instead of looking up weights in the folder
-    # ourselves because the folder could contain unrelated weights..
-    anet_tournament(game, weight_files, topp_num_sample_games, topp_include_uniform)
+    if config["topp"]["enabled"]:
+        # hold tournament with saved agents. Use the list passed from training instead of looking up weights in the
+        # folder ourselves because the folder could contain unrelated weights..
+        anet_tournament(game, weight_files, topp_num_sample_games, topp_include_uniform)
 
 if __name__ == '__main__':
     main()
