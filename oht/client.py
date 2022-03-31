@@ -8,7 +8,7 @@ import numpy as np
 
 class OHTClient(ActorClient):
 
-    def __init__(self, config, visualize=False):
+    def __init__(self, config):
         oht_config = config.get("oht", {})
         try:
             token = oht_config["token"]
@@ -21,7 +21,7 @@ class OHTClient(ActorClient):
         self.game = None
         self.board_size = None
         self.agent_config = config.get("agent", {})
-        self.visualize = visualize
+        self.visualize = oht_config.get("visualize", False)
         self.progress: tqdm = None
 
     def handle_series_start(
@@ -47,8 +47,9 @@ class OHTClient(ActorClient):
         self.progress.update(1)
 
     def handle_game_over(self, winner, end_state):
+        state = self.encode_state(end_state)
         if self.visualize:
-            self.game.visualize(end_state)
+            self.game.visualize(state)
 
     def handle_series_over(self, stats):
         for stat in stats:

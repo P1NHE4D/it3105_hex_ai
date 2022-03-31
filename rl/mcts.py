@@ -135,10 +135,8 @@ class MCTS:
         :return: obtained reward
         """
         while not self.game.is_state_terminal(state):
-            if np.random.choice([True, False], p=[self.epsilon, 1 - self.epsilon]):
-                actions = self.game.get_legal_actions(state)
-                action_idx = np.random.choice(np.arange(0, len(actions)))
-                action = actions[action_idx]
+            if np.random.random() < self.epsilon:
+                action = np.random.choice(self.game.get_legal_actions(state))
             else:
                 action = self.default_policy(state, self.game.get_legal_actions(state))
             state = self.game.get_child_state(state, action)

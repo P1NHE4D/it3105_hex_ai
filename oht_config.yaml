@@ -1,21 +1,11 @@
 agent:
-  episodes: 50
-  num_sim: 200
-  save_interval: 10
-  rbuf_size: 100
-  default_policy: "agent"
-  dynamic_sim: false
   anet:
-    learning_rate: 0.01
-    epochs: 1
-    batch_size: 10
     optimizer: "adam"
     hidden_layers: [
       [32, "relu"],
     ]
-  mcts:
-    c: 1
-    exp_prob: 1.0
+    weight_file: ""
 oht:
   token: ""
   qualify: false
+  visualize: false

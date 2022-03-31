@@ -44,10 +44,8 @@ class Agent:
         )
         if config.get('default_policy') == 'uniform':
             self.mcts_default_policy = lambda _, legal_actions: np.random.choice(legal_actions)
-        elif config.get('default_policy') == 'agent':
-            self.mcts_default_policy = lambda state, legal_actions: self.propose_action(state, legal_actions)
         else:
-            raise ValueError('invalid default_policy config')
+            self.mcts_default_policy = lambda state, legal_actions: self.propose_action(state, legal_actions)
 
         self.mcts_tree = None
 
