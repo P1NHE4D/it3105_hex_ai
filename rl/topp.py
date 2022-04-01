@@ -68,7 +68,7 @@ def round_robin_tournament(game: Game, agents: list[tuple[str, Agent]], num_game
 
 def anet_tournament(
         game: Game,
-        weight_files: list[str],
+        anet_configs: list[dict],
         num_games_per_series: int,
         include_uniform: bool,
         visualize: bool = False,
@@ -78,8 +78,8 @@ def anet_tournament(
     agent as a sanity check
     """
     named_agents = [
-        (weight_file, ANETAgent(game=game, config={'anet': {'weight_file': weight_file}}))
-        for weight_file in weight_files
+        (anet_config['anet']['weight_file'], ANETAgent(game=game, config=anet_config))
+        for anet_config in anet_configs
     ]
     if include_uniform:
         named_agents.append(('uniform', UniformAgent()))
@@ -99,17 +99,20 @@ if __name__ == '__main__':
         'rl/models/anet_episode_49',
     ]
 
-    h = Hex(4)
+    configs = [
+        {
+            'anet': {
+                'weight_file': weight_file,
+                'hidden_layers': [[32, 'relu']],
+            },
+        }
+        for weight_file in weight_files
+    ]
 
-    agents = [
-                 (weight_file, ANETAgent(game=h, config={'anet': {'weight_file': weight_file}}))
-                 for weight_file in weight_files
-             ] + [
-                 ('uniform', UniformAgent()),
-             ]
-
-    play_game(h, agents[-2][1], agents[-1][1], visualize=True)
-
-    results = round_robin_tournament(h, agents, 25)
-    for name, wins, losses in results:
-        print(name, wins / (wins + losses), wins, losses)
+    anet_tournament(
+        game=Hex(3),
+        anet_configs=configs,
+        num_games_per_series=25,
+        include_uniform=True,
+        visualize=False,
+    )
