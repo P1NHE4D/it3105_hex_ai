@@ -2,8 +2,9 @@ from tqdm import tqdm
 
 from game.hex import Hex
 from oht.ActorClient import ActorClient
-from rl.agent import Agent
 import numpy as np
+
+from rl.anet_agent import ANETAgent
 
 
 class OHTClient(ActorClient):
@@ -29,7 +30,7 @@ class OHTClient(ActorClient):
     ):
         self.board_size = game_params[0]
         self.game = Hex(self.board_size)
-        self.agent = Agent(config=self.agent_config, game=self.game)
+        self.agent = ANETAgent(config=self.agent_config, game=self.game)
         self.progress = tqdm(range(num_games), desc="Game")
 
         print("Series started | Number of games: {} | Board size: {}".format(num_games, self.board_size))
