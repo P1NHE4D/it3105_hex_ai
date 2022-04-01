@@ -1,3 +1,4 @@
+import copy
 import os
 
 import numpy as np
@@ -56,7 +57,8 @@ def main():
         topp_include_uniform = topp_params["include_uniform"]
 
     # configure agent
-    agent = ANETAgent(config=config.get("agent", {}), game=game)
+    agent_config = config.get("agent", {})
+    agent = ANETAgent(config=agent_config, game=game)
 
     # train agent
     sample_game(game=game, agent=agent, plot=False)
@@ -66,7 +68,12 @@ def main():
     if config["topp"]["enabled"]:
         # hold tournament with saved agents. Use the list passed from training instead of looking up weights in the
         # folder ourselves because the folder could contain unrelated weights..
-        anet_tournament(game, weight_files, topp_num_sample_games, topp_include_uniform)
+        configs = []
+        for weight_file in weight_files:
+            cpy = copy.deepcopy(agent_config)
+            cpy['anet']['weight_file'] = weight_file
+            configs.append(cpy)
+        anet_tournament(game, configs, topp_num_sample_games, topp_include_uniform)
 
 if __name__ == '__main__':
     main()
