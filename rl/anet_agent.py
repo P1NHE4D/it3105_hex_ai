@@ -9,8 +9,8 @@ from tensorflow import keras
 from tqdm import tqdm
 from game.interface import Game
 import numpy as np
-import tensorflow as tf
 from collections import deque
+from rl.utils import LiteModel
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -47,6 +47,9 @@ class ANETAgent(Agent):
             learning_rate=anet_config.get("learning_rate", 0.01),
             weight_file=anet_config.get("weight_file", None)
         )
+        # required construct LiteModel (informs self.anet of its input size)
+        self.anet.predict(np.array([self.game.get_initial_state()]))
+        self.lite_model: LiteModel = LiteModel.from_keras_model(self.anet)
         default_policy_str = config.get('default_policy', "uniform")
         if default_policy_str == 'uniform':
             self.mcts_default_policy = lambda _, legal_actions: np.random.choice(legal_actions)
@@ -89,6 +92,7 @@ class ANETAgent(Agent):
 
             self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
                           verbose=3, callbacks=[history])
+            self.lite_model = LiteModel.from_keras_model(self.anet)
             if episode % self.save_interval == 0 or episode == self.episodes-1:
                 weight_file = f"{self.file_path}/anet_episode_{episode}"
                 self.anet.save_weights(filepath=weight_file)
@@ -113,8 +117,7 @@ class ANETAgent(Agent):
         :param legal_actions: Possible actions from the given state (not all actions)
         :return: optimal action according to the learned policy
         """
-        tensor = tf.convert_to_tensor(np.array([state]))
-        distribution = self.anet(tensor)[0]
+        distribution = self.lite_model.predict(np.array([state]))[0]
         distribution = np.array(distribution)
 
         all_actions_idx = np.arange(0, self.game.number_of_actions())
