@@ -37,7 +37,7 @@ class ANETAgent(Agent):
         self.dynamic_sim = config.get("dynamic_sim", False)
         self.epsilon = config.get("epsilon", 0)
         self.epsilon_decay = config.get("epsilon_decay", 1)
-        self.fit_interval = config.get("fit_interval", 0)
+        self.fit_interval = config.get("fit_interval", 1)
         self.game = game
         self.anet = ANET(
             hidden_layers=anet_config.get("hidden_layers", [(32, "relu")]),
