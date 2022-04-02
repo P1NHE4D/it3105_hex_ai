@@ -1,6 +1,8 @@
 from pprint import pprint
 import numpy as np
 from game.interface import Game
+from game.nim import Nim
+from rl.utils import LiteModel
 
 
 class MCTSNode:
@@ -76,13 +78,17 @@ class MCTS:
             self,
             config,
             default_policy,
-            epsilon
+            epsilon,
+            critic,
+            sigma
     ):
         self.root = None
         self.c = config.get("c", 1.0)
         self.exp_prob = config.get("exp_prob", 1.0)
         self.default_policy = default_policy
         self.epsilon = epsilon
+        self.critic: LiteModel = critic
+        self.sigma = sigma
 
     def simulate(self, game: Game, num_sim):
         """
@@ -115,7 +121,11 @@ class MCTS:
                 sim_game.get_child_state(node.action)
 
             # obtain reward
-            reward = self.rollout(sim_game)
+            if np.random.random() < self.sigma:
+                reward = self.rollout(sim_game)
+            else:
+                state = sim_game.get_current_state()
+                reward = self.critic.predict(state)
 
             # update nodes on path
             while node is not None:

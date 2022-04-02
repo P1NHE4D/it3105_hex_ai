@@ -8,6 +8,8 @@ agent:
   default_policy: "agent"
   epsilon: 0.2
   epsilon_decay: 0.99
+  sigma: 1
+  sigma_decay: 0.99
   anet:
     # NOTE: when we start getting serious about training agents we should clearly separate between different games &
     # configurations.. For now just dump them to the default folder. Comment is here to show how I would dump weights
@@ -25,6 +27,13 @@ agent:
   mcts:
     c: 1
     exp_prob: 1.0
+  critic:
+    optimizer: "adam"
+    learning_rate: 0.01
+    hidden_layers: [
+      [128, "relu"]
+    ]
+
 game:
   name: "hex"
   params:
