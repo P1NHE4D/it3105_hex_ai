@@ -37,6 +37,7 @@ class ANETAgent(Agent):
         self.dynamic_sim = config.get("dynamic_sim", False)
         self.epsilon = config.get("epsilon", 0)
         self.epsilon_decay = config.get("epsilon_decay", 1)
+        self.fit_interval = config.get("fit_interval", 0)
         self.game = game
         self.anet = ANET(
             hidden_layers=anet_config.get("hidden_layers", [(32, "relu")]),
@@ -51,6 +52,7 @@ class ANETAgent(Agent):
 
         self.sigma = config.get("sigma", 1)
         self.sigma_decay = config.get("sigma_decay", 0)
+        self.sigma_delay = config.get("sigma_delay", 20)
         critic_config = config.get("critic", {})
         self.critic = Critic(
             hidden_layers=critic_config.get("hidden_layers", [(32, "relu")]),
@@ -77,6 +79,7 @@ class ANETAgent(Agent):
         weight_files = []
         rbuf_x = deque(maxlen=self.rbuf_size)
         rbuf_y = deque(maxlen=self.rbuf_size)
+        cbuf_x = []
         progress = tqdm(range(self.episodes), desc="Episode")
         history = LossHistory()
         for episode in progress:
@@ -95,24 +98,33 @@ class ANETAgent(Agent):
                 if self.dynamic_sim:
                     actions = self.game.get_legal_actions()
                     factor = 1 - (len(actions) / self.game.number_of_actions())
-                    num_sim = max([round(factor * self.num_sim), 50])
+                    num_sim = max([round(factor * self.num_sim), self.min_sim])
                 distribution = self.mcts_tree.simulate(game=self.game, num_sim=num_sim)
                 rbuf_x.append(state)
                 rbuf_y.append(distribution)
                 action = np.argmax(distribution)
                 state = self.game.get_child_state(action)
+                cbuf_x.append(state)
                 self.mcts_tree.retain_subtree(action)
 
-            self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
-                          verbose=3, callbacks=[history])
-            self.anet_lite = LiteModel.from_keras_model(self.anet)
+            if episode % self.fit_interval == 0 or episode == self.episodes - 1:
+                self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
+                              verbose=3, callbacks=[history])
+                self.anet_lite = LiteModel.from_keras_model(self.anet)
+
+                reward = self.game.get_state_reward(state)
+                self.critic.fit(x=np.array(cbuf_x), y=np.full((len(cbuf_x)), fill_value=reward), verbose=3)
+                self.critic_lite = LiteModel.from_keras_model(self.critic)
+                cbuf_x = []
+
             if episode % self.save_interval == 0 or episode == self.episodes-1:
                 weight_file = f"{self.file_path}/anet_episode_{episode}"
                 self.anet.save_weights(filepath=weight_file)
                 weight_files.append(weight_file)
 
             self.epsilon *= self.epsilon_decay
-            self.sigma *= self.sigma_decay
+            if episode >= self.sigma_delay:
+                self.sigma *= self.sigma_decay
 
             progress.set_description(
                 "Batch loss: {:.4f}".format(history.losses[-1]) +

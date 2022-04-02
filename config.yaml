@@ -1,5 +1,6 @@
 agent:
   episodes: 10
+  fit_interval: 1
   num_sim: 300
   dynamic_sim: true
   min_sim: 50
@@ -9,13 +10,14 @@ agent:
   epsilon: 0.2
   epsilon_decay: 0.99
   sigma: 1
-  sigma_decay: 0.99
+  sigma_decay: 0.9
+  sigma_delay: 20
   anet:
     # NOTE: when we start getting serious about training agents we should clearly separate between different games &
     # configurations.. For now just dump them to the default folder. Comment is here to show how I would dump weights
     # for a size 4 hex game
     #file_path: "hex_4"
-    file_path: "hex_5_512_relu_300sim_dynamic"
+    # file_path: "hex_5_512_relu_300sim_dynamic"
     # weight_file: "hex_5_512_relu_300sim_dynamic/anet_episode_100"
     learning_rate: 0.01
     epochs: 1

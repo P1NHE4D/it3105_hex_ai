@@ -2,7 +2,7 @@ from pprint import pprint
 import numpy as np
 from game.interface import Game
 from game.nim import Nim
-from rl.utils import LiteModel
+from rl.nn import LiteModel
 
 
 class MCTSNode:
