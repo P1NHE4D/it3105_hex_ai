@@ -33,6 +33,7 @@ class ANETAgent(Agent):
         self.rbuf_size = config.get("rbuf_size", 1000)
         self.save_interval = config.get("save_interval", 10)
         self.num_sim = config.get("num_sim", 50)
+        self.min_sim = config.get("min_sim", 50)
         self.epochs = anet_config.get("epochs", 10)
         self.batch_size = anet_config.get("batch_size", 100)
         self.file_path = anet_config.get("file_path", f"{ROOT_DIR}/rl/models")
@@ -82,7 +83,8 @@ class ANETAgent(Agent):
                 num_sim = self.num_sim
                 if self.dynamic_sim:
                     actions = self.game.get_legal_actions(state=state)
-                    num_sim = max([len(actions) / self.num_sim, 10])
+                    factor = 1 - (len(actions) / self.game.number_of_actions())
+                    num_sim = max([round(factor * self.num_sim), 50])
                 distribution = self.mcts_tree.simulate(state=state, num_sim=num_sim)
                 rbuf_x.append(state)
                 rbuf_y.append(distribution)
