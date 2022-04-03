@@ -1,7 +1,6 @@
 from pprint import pprint
 import numpy as np
 from game.interface import Game
-from game.nim import Nim
 from rl.nn import LiteModel
 
 
@@ -125,7 +124,7 @@ class MCTS:
                 reward = self.rollout(sim_game)
             else:
                 state = sim_game.get_current_state()
-                reward = self.critic.predict(state)
+                reward = self.critic.predict(np.array([state]))[0][0]
 
             # update nodes on path
             while node is not None:

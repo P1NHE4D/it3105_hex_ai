@@ -51,7 +51,7 @@ class ANETAgent(Agent):
         self.anet_lite: LiteModel = LiteModel.from_keras_model(self.anet)
 
         self.sigma = config.get("sigma", 1)
-        self.sigma_decay = config.get("sigma_decay", 0)
+        self.sigma_decay = config.get("sigma_decay", 1)
         self.sigma_delay = config.get("sigma_delay", 20)
         critic_config = config.get("critic", {})
         self.critic = Critic(
@@ -80,6 +80,7 @@ class ANETAgent(Agent):
         rbuf_x = deque(maxlen=self.rbuf_size)
         rbuf_y = deque(maxlen=self.rbuf_size)
         cbuf_x = []
+        cbuf_y = []
         progress = tqdm(range(self.episodes), desc="Episode")
         history = LossHistory()
         for episode in progress:
@@ -107,15 +108,17 @@ class ANETAgent(Agent):
                 cbuf_x.append(state)
                 self.mcts_tree.retain_subtree(action)
 
+            cbuf_y.extend(np.full(len(cbuf_x) - len(cbuf_y), fill_value=self.game.get_state_reward()))
+
             if episode % self.fit_interval == 0 or episode == self.episodes - 1:
                 self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
                               verbose=3, callbacks=[history])
                 self.anet_lite = LiteModel.from_keras_model(self.anet)
 
-                reward = self.game.get_state_reward(state)
-                self.critic.fit(x=np.array(cbuf_x), y=np.full((len(cbuf_x)), fill_value=reward), verbose=3)
+                self.critic.fit(x=np.array(cbuf_x), y=np.array(cbuf_y), verbose=3)
                 self.critic_lite = LiteModel.from_keras_model(self.critic)
                 cbuf_x = []
+                cbuf_y = []
 
             if episode % self.save_interval == 0 or episode == self.episodes-1:
                 weight_file = f"{self.file_path}/anet_episode_{episode}"
@@ -130,7 +133,8 @@ class ANETAgent(Agent):
                 "Batch loss: {:.4f}".format(history.losses[-1]) +
                 " | Average loss: {:.4f}".format(np.mean(history.losses)) +
                 " | RBUF Size: {}".format(len(rbuf_x)) +
-                " | Epsilon: {}".format(self.epsilon)
+                " | Epsilon: {}".format(self.epsilon) +
+                " | Sigma: {}".format(self.sigma)
             )
 
         return weight_files
