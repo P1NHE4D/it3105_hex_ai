@@ -9,6 +9,12 @@ class Game(ABC):
     list of all actions.
     """
 
+    def __init__(self, starting_player=0):
+        self.current_player = starting_player
+
+    def create_copy(self):
+        return deepcopy(self)
+
     @abstractmethod
     def get_initial_state(self):
         """
@@ -17,42 +23,45 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def get_child_state(self, state, action):
+    def get_current_state(self):
+        pass
+
+    @abstractmethod
+    def get_child_state(self, action):
         """
         Resulting state when taking 'action' in 'state'
         """
         pass
 
     @abstractmethod
-    def is_state_terminal(self, state):
+    def is_state_terminal(self):
         """
         Returns True if the current state is terminal, and False otherwise. A state is terminal if the game is over
         """
         pass
 
     @abstractmethod
-    def get_legal_actions(self, state):
+    def get_legal_actions(self):
         """
         Returns a list of legal actions
         """
         pass
 
     @abstractmethod
-    def get_state_reward(self, state):
+    def get_state_reward(self):
         """
         Reward of the given state relative to the starting player (player 0)
         """
         pass
 
-    @abstractmethod
-    def player_to_move(self, state):
+    def player_to_move(self):
         """
         Returns for a state which player should make a move next
         """
-        pass
+        return self.current_player
 
     @abstractmethod
-    def next_player_to_move(self, state):
+    def next_player_to_move(self):
         """
         Returns for a state which player should make a move after a move is taken
         """
@@ -74,7 +83,7 @@ class Game(ABC):
         """
         pass
 
-    def visualize(self, state):
+    def visualize(self):
         """
         Visualize state
         """

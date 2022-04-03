@@ -1,10 +1,7 @@
 import copy
 import os
-
-import numpy as np
 from tqdm import tqdm
 from yaml import safe_load, YAMLError
-
 from game.hex import Hex
 from game.nim import Nim
 from rl.anet_agent import ANETAgent
@@ -74,6 +71,7 @@ def main():
             cpy['anet']['weight_file'] = weight_file
             configs.append(cpy)
         anet_tournament(game, configs, topp_num_sample_games, topp_include_uniform)
+
 
 if __name__ == '__main__':
     main()

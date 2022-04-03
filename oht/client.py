@@ -37,9 +37,9 @@ class OHTClient(ActorClient):
         print()
 
     def handle_get_action(self, state):
-        state = self.encode_state(state)
-        actions = self.game.get_legal_actions(state)
-        action_idx = self.agent.propose_action(state, actions)
+        actions = [i for i, cell in enumerate(state[1:]) if cell == 0]
+        encoded_state = self.encode_state(state)
+        action_idx = self.agent.propose_action(encoded_state, actions)
         row, col = self.game.get_action(action_idx)
         return row, col
 
