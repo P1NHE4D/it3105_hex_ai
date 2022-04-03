@@ -81,7 +81,7 @@ class Hex(Game):
         """
         :return: returns array comprising possible actions in current state
         """
-        return [i for i, rowcol in enumerate(self.all_actions) if self.board[rowcol[0]][rowcol[1]].state == HexCellState.EMPTY]
+        return [i for i, (row, col) in enumerate(self.all_actions) if self.board[row][col].state == HexCellState.EMPTY]
 
     def get_action_length(self):
         return len(self.all_actions)
@@ -222,20 +222,6 @@ def diamond_layout(graph: nx.Graph):
             init_y -= 0.1
             init_x -= 0.1
             x, y = init_x, init_y
-    return pos
-
-
-def array_layout(graph: nx.Graph):
-    pos = {}
-    step = 1 / np.sqrt(len(graph.nodes))
-    x_pos = 0
-    y_pos = 1
-    for node in graph.nodes:
-        pos[node] = (x_pos, y_pos)
-        x_pos += step
-        if x_pos >= 1:
-            y_pos -= step
-            x_pos = 0
     return pos
 
 

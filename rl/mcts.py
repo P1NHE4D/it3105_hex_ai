@@ -29,13 +29,14 @@ class MCTSNode:
         pprint(vars(self))
 
 
-def action_distribution(node: MCTSNode, game: Game):
+def action_distribution(node: MCTSNode, num_actions):
     """
     Computes an action distribution over all actions for the given node
     :param node: node for which the distribution should be calculated
+    :param num_actions: number of actions in the game
     :return: distribution over all actions
     """
-    distribution = np.zeros((game.number_of_actions()))
+    distribution = np.zeros(num_actions)
     for child in node.children:
         idx = child.action
         distribution[idx] = child.incoming_edge_visit_count
@@ -47,7 +48,7 @@ def expand(node: MCTSNode, game: Game):
     Expands node
 
     :param node: node to expand
-    :param state: game state
+    :param game: game instance
     :return: child node
     """
     for action in game.get_legal_actions():
@@ -123,7 +124,7 @@ class MCTS:
                 node.cumulative_reward += reward
                 node = node.parent
 
-        return action_distribution(self.root, game)
+        return action_distribution(self.root, game.number_of_actions())
 
     def tree_policy(self, node):
         """
@@ -158,7 +159,7 @@ class MCTS:
         """
         Performs a rollout of the current game until a terminal state is reached.
 
-        :param state: perform rollout from this state
+        :param game: perform rollout from state of the given game
         :return: obtained reward
         """
         state = game.get_current_state()
