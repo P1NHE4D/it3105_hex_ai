@@ -46,6 +46,7 @@ class ANETAgent(Agent):
             learning_rate=anet_config.get("learning_rate", 0.01),
             weight_file=anet_config.get("weight_file", None)
         )
+        self.visualize_episode = config.get('visualize_episode', False)
         # required construct LiteModel (informs self.anet of its input size)
         self.anet.predict(np.array([self.game.get_initial_state()]))
         self.anet_lite: LiteModel = LiteModel.from_keras_model(self.anet)
@@ -107,6 +108,9 @@ class ANETAgent(Agent):
                 state = self.game.get_child_state(action)
                 cbuf_x.append(state)
                 self.mcts_tree.retain_subtree(action)
+
+            if self.visualize_episode:
+                self.game.visualize()
 
             cbuf_y.extend(np.full(len(cbuf_x) - len(cbuf_y), fill_value=self.game.get_state_reward()))
 

@@ -9,6 +9,7 @@ agent:
   default_policy: "agent"
   epsilon: 0.2
   epsilon_decay: 0.99
+  visualize_episode: true
   sigma: 1
   sigma_decay: 0.9
   sigma_delay: 20
