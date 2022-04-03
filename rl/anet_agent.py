@@ -73,23 +73,22 @@ class ANETAgent(Agent):
             # reset mcts tree
             self.mcts_tree = MCTS(
                 config=self.mcts_config,
-                game=self.game,
                 default_policy=self.mcts_default_policy,
                 epsilon=self.epsilon
             )
 
             state = self.game.get_initial_state()
-            while not self.game.is_state_terminal(state):
+            while not self.game.is_state_terminal():
                 num_sim = self.num_sim
                 if self.dynamic_sim:
-                    actions = self.game.get_legal_actions(state=state)
+                    actions = self.game.get_legal_actions()
                     factor = 1 - (len(actions) / self.game.number_of_actions())
                     num_sim = max([round(factor * self.num_sim), 50])
-                distribution = self.mcts_tree.simulate(state=state, num_sim=num_sim)
+                distribution = self.mcts_tree.simulate(game=self.game, num_sim=num_sim)
                 rbuf_x.append(state)
                 rbuf_y.append(distribution)
                 action = np.argmax(distribution)
-                state = self.game.get_child_state(state, action)
+                state = self.game.get_child_state(action)
                 self.mcts_tree.retain_subtree(action)
 
             self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,

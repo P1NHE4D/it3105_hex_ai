@@ -16,17 +16,17 @@ def play_game(game: Game, player_1: Agent, player_2: Agent, visualize=False):
     """
     state = game.get_initial_state()
     player_to_move = player_1
-    while not game.is_state_terminal(state):
-        action = player_to_move.propose_action(state, game.get_legal_actions(state))
-        state = game.get_child_state(state, action)
+    while not game.is_state_terminal():
+        action = player_to_move.propose_action(state, game.get_legal_actions())
+        state = game.get_child_state(action)
         player_to_move = player_2 if player_to_move == player_1 else player_1
 
-    reward = game.get_state_reward(state)
+    reward = game.get_state_reward()
     if reward == 0:
         raise ValueError('Game ended in tie, but ties are not implemented for play_game')
 
     if visualize:
-        game.visualize(state)
+        game.visualize()
 
     return 1 if reward > 0 else 2
 

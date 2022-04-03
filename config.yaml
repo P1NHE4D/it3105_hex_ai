@@ -1,5 +1,5 @@
 agent:
-  episodes: 200
+  episodes: 10
   num_sim: 300
   dynamic_sim: true
   min_sim: 50
@@ -14,7 +14,7 @@ agent:
     # for a size 4 hex game
     #file_path: "hex_4"
     file_path: "hex_5_512_relu_300sim_dynamic"
-    weight_file: "hex_5_512_relu_300sim_dynamic/anet_episode_100"
+    # weight_file: "hex_5_512_relu_300sim_dynamic/anet_episode_100"
     learning_rate: 0.01
     epochs: 1
     batch_size: 200
@@ -28,7 +28,7 @@ agent:
 game:
   name: "hex"
   params:
-    board_size: 5
+    board_size: 7
 topp:
   enabled: false
   # params irrelevant if enabled is false

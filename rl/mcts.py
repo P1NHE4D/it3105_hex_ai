@@ -1,7 +1,6 @@
 from pprint import pprint
 import numpy as np
 from game.interface import Game
-from game.nim import Nim
 
 
 class MCTSNode:
@@ -30,6 +29,37 @@ class MCTSNode:
         pprint(vars(self))
 
 
+def action_distribution(node: MCTSNode, game: Game):
+    """
+    Computes an action distribution over all actions for the given node
+    :param node: node for which the distribution should be calculated
+    :return: distribution over all actions
+    """
+    distribution = np.zeros((game.number_of_actions()))
+    for child in node.children:
+        idx = child.action
+        distribution[idx] = child.incoming_edge_visit_count
+    return distribution / np.sum(distribution)
+
+
+def expand(node: MCTSNode, game: Game):
+    """
+    Expands node
+
+    :param node: node to expand
+    :param state: game state
+    :return: child node
+    """
+    for action in game.get_legal_actions():
+        node.children.append(MCTSNode(
+            parent=node,
+            action=action,
+            player=game.next_player_to_move()
+        ))
+    idx = np.random.choice(np.arange(len(node.children)))
+    return node.children[idx]
+
+
 class MCTS:
     """
     MCTS on Game, using default_policy during rollout. The major methods are 'simulate' and 'retain_subtree'. The rest
@@ -44,18 +74,16 @@ class MCTS:
     def __init__(
             self,
             config,
-            game: Game,
             default_policy,
             epsilon
     ):
         self.root = None
         self.c = config.get("c", 1.0)
         self.exp_prob = config.get("exp_prob", 1.0)
-        self.game = game
         self.default_policy = default_policy
         self.epsilon = epsilon
 
-    def simulate(self, state, num_sim):
+    def simulate(self, game: Game, num_sim):
         """
         Performs simulations of the current game to obtain an action distribution
 
@@ -67,26 +95,26 @@ class MCTS:
             self.root = MCTSNode(
                 parent=None,
                 action=None,
-                player=self.game.player_to_move(state),
+                player=game.player_to_move(),
             )
         for _ in range(num_sim):
-            simulation_state = state
+            sim_game = game.create_copy()
 
             node: MCTSNode = self.root
 
             # use tree policy to get to a node that is not fully expanded and not a terminal node
             while not node.is_leaf():
                 node = self.tree_policy(node)
-                simulation_state = self.game.get_child_state(simulation_state, node.action)
+                sim_game.get_child_state(node.action)
 
             # only expand if node is not terminal
             expand_tree = np.random.random() < self.exp_prob
-            if expand_tree and not self.game.is_state_terminal(simulation_state):
-                node = self.expand(node, simulation_state)
-                simulation_state = self.game.get_child_state(simulation_state, node.action)
+            if expand_tree and not sim_game.is_state_terminal():
+                node = expand(node, sim_game)
+                sim_game.get_child_state(node.action)
 
             # obtain reward
-            reward = self.rollout(simulation_state)
+            reward = self.rollout(sim_game)
 
             # update nodes on path
             while node is not None:
@@ -95,7 +123,7 @@ class MCTS:
                 node.cumulative_reward += reward
                 node = node.parent
 
-        return self.action_distribution(self.root)
+        return action_distribution(self.root, game)
 
     def tree_policy(self, node):
         """
@@ -125,7 +153,7 @@ class MCTS:
 
     def rollout(
             self,
-            state,
+            game,
     ):
         """
         Performs a rollout of the current game until a terminal state is reached.
@@ -133,25 +161,14 @@ class MCTS:
         :param state: perform rollout from this state
         :return: obtained reward
         """
-        while not self.game.is_state_terminal(state):
+        state = game.get_current_state()
+        while not game.is_state_terminal():
             if np.random.random() < self.epsilon:
-                action = np.random.choice(self.game.get_legal_actions(state))
+                action = np.random.choice(game.get_legal_actions())
             else:
-                action = self.default_policy(state, self.game.get_legal_actions(state))
-            state = self.game.get_child_state(state, action)
-        return self.game.get_state_reward(state)
-
-    def action_distribution(self, node: MCTSNode):
-        """
-        Computes an action distribution over all actions for the given node
-        :param node: node for which the distribution should be calculated
-        :return: distribution over all actions
-        """
-        distribution = np.zeros((self.game.number_of_actions()))
-        for child in node.children:
-            idx = child.action
-            distribution[idx] = child.incoming_edge_visit_count
-        return distribution / np.sum(distribution)
+                action = self.default_policy(state, game.get_legal_actions())
+            state = game.get_child_state(action)
+        return game.get_state_reward()
 
     def retain_subtree(self, action):
         """
@@ -166,60 +183,3 @@ class MCTS:
                 self.root.action = None
                 return
         raise ValueError('passed action does not correspond to a child of root')
-
-    def expand(self, node, state):
-        """
-        Expands node
-
-        :param node: node to expand
-        :param state: game state
-        :return: child node
-        """
-        for action in self.game.get_legal_actions(state):
-            node.children.append(MCTSNode(
-                parent=node,
-                action=action,
-                player=self.game.next_player_to_move(state)
-            ))
-        idx = np.random.choice(np.arange(len(node.children)))
-        return node.children[idx]
-
-
-
-
-if __name__ == '__main__':
-    # test case
-    if True:
-        game = Nim(
-            stones=4,
-            max_take=2,
-        )
-        mcts = MCTS(
-            config={},
-            game=game,
-            default_policy=lambda _, legal_actions: legal_actions[0],
-        )
-        print(mcts.simulate(game.get_initial_state(), num_sim=5000))
-    if False:
-        game = Nim()
-        node = MCTSNode(
-            parent_state=None,
-            edge_action=None,
-            state=game.init_game(),
-            player=game.player_to_move(),
-            actions=game.get_legal_actions(),
-        )
-        while not node.is_leaf():
-            node.describe()
-            if not node.is_fully_expanded():
-                node = node.expand(game)
-        node.describe()
-    if False:
-        while True:
-            game = Nim(
-                stones=2,
-                max_take=3,
-            )
-            game.init_game()
-            mcts = MCTS()
-            print(mcts.simulate(game, 10000))
