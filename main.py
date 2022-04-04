@@ -11,7 +11,7 @@ from rl.uniform_agent import UniformAgent
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def sample_game(game, agent, num_games=100, plot=False):
+def sample_game(game, agent, num_games=1000, plot=False):
     wins = 0
     losses = 0
     progress = tqdm(range(num_games), desc="Game")
