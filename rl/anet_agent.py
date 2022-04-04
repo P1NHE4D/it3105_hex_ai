@@ -102,11 +102,11 @@ class ANETAgent(Agent):
                     factor = 1 - (len(actions) / self.game.number_of_actions())
                     num_sim = max([round(factor * self.num_sim), self.min_sim])
                 distribution = self.mcts_tree.simulate(game=self.game, num_sim=num_sim)
-                rbuf_x.append(state)
+                rbuf_x.append(np.copy(state))
                 rbuf_y.append(distribution)
                 action = np.argmax(distribution)
                 state = self.game.get_child_state(action)
-                cbuf_x.append(state)
+                cbuf_x.append(np.copy(state))
                 self.mcts_tree.retain_subtree(action)
 
             if self.visualize_episode:
