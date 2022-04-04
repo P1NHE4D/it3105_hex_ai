@@ -106,7 +106,7 @@ class ANETAgent(Agent):
                 rbuf_y.append(distribution)
                 action = np.argmax(distribution)
                 state = self.game.get_child_state(action)
-                cbuf_x.append(state)
+                cbuf_x.append(np.copy(state))
                 self.mcts_tree.retain_subtree(action)
 
             if self.visualize_episode:
