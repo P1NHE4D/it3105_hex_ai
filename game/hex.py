@@ -63,7 +63,7 @@ class Hex(Game):
             node.state = HexCellState.EMPTY
 
         # reset current player
-        self.current_player = 0
+        self.current_player = self.starting_player
 
         # initialize new one hot encoding
         self.ohe_board = np.zeros(2 + 2 * self.board_size ** 2)
