@@ -10,6 +10,7 @@ class Game(ABC):
     """
 
     def __init__(self, starting_player=0):
+        self.starting_player = starting_player
         self.current_player = starting_player
 
     def create_copy(self):
