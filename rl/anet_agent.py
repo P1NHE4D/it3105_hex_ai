@@ -119,8 +119,10 @@ class ANETAgent(Agent):
                               verbose=3, callbacks=[history])
                 self.anet_lite = LiteModel.from_keras_model(self.anet)
 
-                self.critic.fit(x=np.array(cbuf_x), y=np.array(cbuf_y), verbose=3)
-                self.critic_lite = LiteModel.from_keras_model(self.critic)
+                # only afford fitting the critic if there is (or there will be) a non-zero chance of it being used
+                if self.sigma < 1 or self.sigma_decay < 1:
+                    self.critic.fit(x=np.array(cbuf_x), y=np.array(cbuf_y), verbose=3)
+                    self.critic_lite = LiteModel.from_keras_model(self.critic)
                 cbuf_x = []
                 cbuf_y = []
 
