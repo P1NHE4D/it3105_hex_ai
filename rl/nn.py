@@ -23,6 +23,8 @@ def configure_optimizer(optimizer, learning_rate):
         return keras.optimizers.RMSprop(learning_rate=learning_rate)
     if optimizer == "adagrad":
         return keras.optimizers.Adagrad(learning_rate=learning_rate)
+    if optimizer != "adam":
+        print("Unknown optimizer: {}. Falling back to adam as the default optimizer.".format(optimizer))
     return keras.optimizers.Adam(learning_rate=learning_rate)
 
 
@@ -30,7 +32,7 @@ class ANET(Model):
 
     def __init__(self, hidden_layers, output_nodes, optimizer, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        layers = [Dense(nodes, activation=activation) for nodes, activation in hidden_layers]
+        layers = [Dense(nodes, activation=activation if activation != "linear" else None) for nodes, activation in hidden_layers]
         layers.append(Dense(output_nodes, activation="softmax"))
         self.model = Sequential(layers)
         self.compile(
@@ -79,7 +81,7 @@ class Critic(Model):
 
     def __init__(self, hidden_layers, optimizer, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        layers = [Dense(nodes, activation=activation) for nodes, activation in hidden_layers]
+        layers = [Dense(nodes, activation=activation if activation != "linear" else None) for nodes, activation in hidden_layers]
         layers.append(Dense(1, activation="tanh"))
         self.model = Sequential(layers)
         self.compile(
