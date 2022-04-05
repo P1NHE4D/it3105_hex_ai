@@ -1,0 +1,2 @@
+model_checkpoint_path: "anet_initial"
+all_model_checkpoint_paths: "anet_initial"

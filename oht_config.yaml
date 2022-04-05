@@ -1,8 +1,9 @@
 agent:
   anet:
+    weight_file: "rl/rl/models/anet_episode_299"
     optimizer: "adam"
     hidden_layers: [
-      [32, "relu"],
+      [ 512, "relu" ],
     ]
 oht:
   token: ""

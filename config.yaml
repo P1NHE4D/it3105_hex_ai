@@ -1,34 +1,29 @@
 agent:
-  episodes: 10
+  episodes: 300
   fit_interval: 1
-  num_sim: 300
-  dynamic_sim: true
+  num_sim: 500
+  dynamic_sim: false
   min_sim: 50
   save_interval: 50
-  rbuf_size: 500
+  rbuf_size: 1024
   default_policy: "agent"
   epsilon: 0.2
-  epsilon_decay: 0.99
+  epsilon_decay: 0.98
   visualize_episode: true
   sigma: 1
-  sigma_decay: 0.9
+  sigma_decay: 1
   sigma_delay: 20
   anet:
-    # NOTE: when we start getting serious about training agents we should clearly separate between different games &
-    # configurations.. For now just dump them to the default folder. Comment is here to show how I would dump weights
-    # for a size 4 hex game
-    #file_path: "hex_4"
-    # file_path: "hex_5_512_relu_300sim_dynamic"
-    # weight_file: "hex_5_512_relu_300sim_dynamic/anet_episode_100"
+    file_path: "models/hex5/512relu"
     learning_rate: 0.01
     epochs: 1
-    batch_size: 200
+    batch_size: 64
     optimizer: "adam"
     hidden_layers: [
       [512, "relu"],
     ]
   mcts:
-    c: 1
+    c: 2
     exp_prob: 1.0
   critic:
     optimizer: "adam"
@@ -40,10 +35,9 @@ agent:
 game:
   name: "hex"
   params:
-    board_size: 7
+    board_size: 5
 topp:
-  enabled: false
+  enabled: true
   # params irrelevant if enabled is false
-  params:
-    include_uniform: true
-    num_games_per_series: 50
+  include_uniform: false
+  num_games_per_series: 50
