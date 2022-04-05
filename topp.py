@@ -27,8 +27,8 @@ def main():
     topp_config = config["topp"]
     topp_num_sample_games = topp_config["num_games_per_series"]
     topp_include_uniform = topp_config["include_uniform"]
-    path = topp_config["weight_path"]
-    weight_files = glob(path.strip("/") + "/*.index")
+    path = glob(topp_config["weight_path"].strip("/") + "/*.index")
+    weight_files = [f.strip(".index") for f in path]
     configs = []
     for weight_file in weight_files:
         cpy = deepcopy(agent_config)
