@@ -1,5 +1,4 @@
 import copy
-import glob
 import os
 from tqdm import tqdm
 from yaml import safe_load, YAMLError
