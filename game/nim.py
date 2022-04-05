@@ -84,9 +84,6 @@ class Nim(Game):
         elif self.current_player == 0:
             return -1.0
 
-    def player_to_move(self):
-        return self.current_player
-
     def next_player_to_move(self):
         return (self.current_player + 1) % 2
 
