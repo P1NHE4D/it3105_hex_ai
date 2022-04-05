@@ -9,12 +9,12 @@ agent:
   default_policy: "agent"
   epsilon: 0.2
   epsilon_decay: 0.98
-  visualize_episode: false
+  visualize_episode: true
   sigma: 1
   sigma_decay: 1
   sigma_delay: 20
   anet:
-    weight_file: "rl/rl/models/anet_episode_299"
+    file_path: "models/hex5/512relu"
     learning_rate: 0.01
     epochs: 1
     batch_size: 64
@@ -35,10 +35,9 @@ agent:
 game:
   name: "hex"
   params:
-    board_size: 7
+    board_size: 5
 topp:
-  enabled: false
+  enabled: true
   # params irrelevant if enabled is false
-  params:
-    include_uniform: true
-    num_games_per_series: 50
+  include_uniform: false
+  num_games_per_series: 50

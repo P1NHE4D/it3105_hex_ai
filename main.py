@@ -1,4 +1,5 @@
 import copy
+import glob
 import os
 from tqdm import tqdm
 from yaml import safe_load, YAMLError
@@ -46,13 +47,6 @@ def main():
     else:
         raise ValueError(f'unknown game {game_config["name"]}')
 
-    if config["topp"]["enabled"]:
-        # configure topp
-        # NOTE: no default values. expect user to make conscious decisions..
-        topp_params = config["topp"]["params"]
-        topp_num_sample_games = topp_params["num_games_per_series"]
-        topp_include_uniform = topp_params["include_uniform"]
-
     # configure agent
     agent_config = config.get("agent", {})
     agent = ANETAgent(config=agent_config, game=game)
@@ -62,9 +56,11 @@ def main():
     weight_files = agent.train()
     sample_game(game=game, agent=agent, plot=False)
 
-    if config["topp"]["enabled"]:
-        # hold tournament with saved agents. Use the list passed from training instead of looking up weights in the
-        # folder ourselves because the folder could contain unrelated weights..
+    topp_config = config.get("topp", {})
+
+    if topp_config.get("enabled", False):
+        topp_num_sample_games = topp_config["num_games_per_series"]
+        topp_include_uniform = topp_config["include_uniform"]
         configs = []
         for weight_file in weight_files:
             cpy = copy.deepcopy(agent_config)
