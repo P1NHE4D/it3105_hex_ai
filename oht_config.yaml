@@ -6,6 +6,6 @@ agent:
       [ 512, "relu" ],
     ]
 oht:
-  token: "34a2124a64b440c884577d4124acc784"
+  token: ""
   qualify: false
   visualize: false
