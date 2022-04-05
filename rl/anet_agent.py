@@ -142,8 +142,8 @@ class ANETAgent(Agent):
                 self.sigma *= self.sigma_decay
 
             progress.set_description(
-                "Batch loss: {:.4f}".format(history.losses[-1]) +
-                " | Average loss: {:.4f}".format(np.mean(history.losses)) +
+                "Batch loss: {:.4f}".format(history.losses[-1] if len(history.losses) > 0 else -1) +
+                " | Average loss: {:.4f}".format(np.mean(history.losses) if len(history.losses) > 0 else -1) +
                 " | RBUF Size: {}".format(len(rbuf_x)) +
                 " | Epsilon: {}".format(self.epsilon) +
                 " | Sigma: {}".format(self.sigma)
