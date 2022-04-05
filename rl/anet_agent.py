@@ -82,8 +82,14 @@ class ANETAgent(Agent):
         rbuf_y = deque(maxlen=self.rbuf_size)
         cbuf_x = []
         cbuf_y = []
-        progress = tqdm(range(self.episodes), desc="Episode")
+        progress = tqdm(range(1, self.episodes+1), desc="(initial episode)")
         history = LossHistory()
+
+        # save initial weights as episode 0
+        weight_file = f"{self.file_path}/anet_episode_0"
+        self.anet.save_weights(filepath=weight_file)
+        weight_files.append(weight_file)
+
         for episode in progress:
             # reset mcts tree
             self.mcts_tree = MCTS(
@@ -114,7 +120,7 @@ class ANETAgent(Agent):
 
             cbuf_y.extend(np.full(len(cbuf_x) - len(cbuf_y), fill_value=self.game.get_state_reward()))
 
-            if episode % self.fit_interval == 0 or episode == self.episodes - 1:
+            if episode % self.fit_interval == 0 or episode == self.episodes:
                 self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
                               verbose=3, callbacks=[history])
                 self.anet_lite = LiteModel.from_keras_model(self.anet)
@@ -126,7 +132,7 @@ class ANETAgent(Agent):
                 cbuf_x = []
                 cbuf_y = []
 
-            if episode % self.save_interval == 0 or episode == self.episodes-1:
+            if episode % self.save_interval == 0 or episode == self.episodes:
                 weight_file = f"{self.file_path}/anet_episode_{episode}"
                 self.anet.save_weights(filepath=weight_file)
                 weight_files.append(weight_file)
