@@ -35,7 +35,7 @@ def round_robin_tournament(
         game: Game,
         agents: list[tuple[str, Agent]],
         num_games_per_series: int,
-        num_games_to_visualize:int = 0
+        num_games_to_visualize: int = 0
 ):
     """
     Each agent competes with each other agent playing num_games_per_series games. Then the wins/losses statistics of
@@ -45,7 +45,6 @@ def round_robin_tournament(
     wins = defaultdict(lambda: 0)
     losses = defaultdict(lambda: 0)
 
-    # flexing my combinatorics B)
     num_series = len(agents) * (len(agents) - 1) / 2
     total_num_games = num_series * num_games_per_series
 
@@ -54,7 +53,7 @@ def round_robin_tournament(
         series = 0
         for i, (a_name, a_agent) in enumerate(agents[:-1]):
             series += 1
-            for b_name, b_agent in agents[i+1:]:
+            for b_name, b_agent in agents[i + 1:]:
                 for j in range(num_games_per_series):
                     pbar.update(1)
                     should_visualize = j < num_games_to_visualize
@@ -63,12 +62,14 @@ def round_robin_tournament(
                         title = (f"SERIES {series} GAME {j}\n"
                                  f"PLAYER 1 (red): {a_name}\n"
                                  f"PLAYER 2 (black): {b_name}")
-                        winner_name = a_name if play_game(game, a_agent, b_agent, should_visualize, title) == 1 else b_name
+                        winner_name = a_name if play_game(game, a_agent, b_agent, should_visualize,
+                                                          title) == 1 else b_name
                     else:
                         title = (f"SERIES {series} GAME {j}\n"
                                  f"PLAYER 1 (red): {b_name}\n"
                                  f"PLAYER 2 (black): {a_name}")
-                        winner_name = b_name if play_game(game, b_agent, a_agent, should_visualize, title) == 1 else a_name
+                        winner_name = b_name if play_game(game, b_agent, a_agent, should_visualize,
+                                                          title) == 1 else a_name
                     loser_name = a_name if winner_name == b_name else b_name
 
                     wins[winner_name] += 1

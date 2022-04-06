@@ -7,7 +7,7 @@ from rl.nn import LiteModel
 class MCTSNode:
     def __init__(self, parent, action, player):
         """
-        A MCTSNode represents a single node in the tree of MCTS, as well as the edge that leads to it (if any). The
+        An MCTSNode represents a single node in the tree of MCTS, as well as the edge that leads to it (if any). The
         semantics are: "We were in 'parent_state', then 'edge_action' was taken, now I am in 'state' as 'player' and can
         choose from 'actions'"
 
@@ -24,15 +24,16 @@ class MCTSNode:
         self.children: list[MCTSNode] = []
 
     def is_leaf(self):
+        """
+        :return: true if node is a leaf node, false otherwise
+        """
         return len(self.children) == 0
-
-    def describe(self):
-        pprint(vars(self))
 
 
 def action_distribution(node: MCTSNode, num_actions):
     """
     Computes an action distribution over all actions for the given node
+
     :param node: node for which the distribution should be calculated
     :param num_actions: number of actions in the game
     :return: distribution over all actions
@@ -63,16 +64,6 @@ def expand(node: MCTSNode, game: Game):
 
 
 class MCTS:
-    """
-    MCTS on Game, using default_policy during rollout. The major methods are 'simulate' and 'retain_subtree'. The rest
-    is for internal use.
-
-    :param config: mcts config
-    :param game: game we are performing simulations on
-    :param default_policy: must be a lambda taking a state and a list of legal actions as input, and returning a single
-                           action from that list
-    """
-
     def __init__(
             self,
             config,
@@ -81,6 +72,16 @@ class MCTS:
             critic,
             sigma
     ):
+        """
+        Constructs an MCTS tree that is used to simulate a number of games from a given state in order to
+        pick the best action in that state
+
+        :param config: mcts config
+        :param default_policy: must be a lambda taking a state and a list of legal actions as input, and returning a single action from that list
+        :param epsilon: probability for picking a random action during rollout
+        :param critic: critic network
+        :param sigma: probability for using rollouts instead of the critic
+        """
         self.root = None
         self.c = config.get("c", 1.0)
         self.exp_prob = config.get("exp_prob", 1.0)
@@ -140,7 +141,6 @@ class MCTS:
         Computes the optimal action in the given node and returns the resulting child node
 
         :param node: starting node
-        :param c: exploration constant
         :return: optimal child node according to the tree policy
         """
         exploration_bonuses = []
@@ -161,10 +161,7 @@ class MCTS:
 
         return node.children[child_idx]
 
-    def rollout(
-            self,
-            game,
-    ):
+    def rollout(self, game):
         """
         Performs a rollout of the current game until a terminal state is reached.
 

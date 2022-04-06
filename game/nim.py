@@ -1,4 +1,3 @@
-import dataclasses
 import numpy as np
 from game.interface import Game
 
