@@ -20,9 +20,9 @@ class HexState(Enum):
 
 class HexCell:
 
-    def __init__(self, neighbours):
+    def __init__(self, neighbours, state=HexCellState.EMPTY):
         self.neighbours = neighbours
-        self.state = HexCellState.EMPTY
+        self.state = state
 
 
 class Hex(Game):
@@ -179,9 +179,13 @@ class Hex(Game):
             return -1
         return 0
 
-    def visualize(self, title=None):
+    def visualize(self, title=None, state=None):
+        if state is not None:
+            board = hex_board_from_ohe(state, int(np.sqrt((len(state) - 2) / 2)))
+        else:
+            board = self.board
         g = nx.Graph()
-        for row, hex_row in enumerate(self.board):
+        for row, hex_row in enumerate(board):
             for col, node in enumerate(hex_row):
                 node_color = "white"
                 node_edge_color = "black"
@@ -193,12 +197,12 @@ class Hex(Game):
                 g.add_node("node_{}_{}".format(row, col), color=node_color, edge_color=node_edge_color)
 
         # cannot be integrated into the previous loop as this will mix up the order of the nodes
-        for row, hex_row in enumerate(self.board):
+        for row, hex_row in enumerate(board):
             for col, node in enumerate(hex_row):
                 for neighbour in node.neighbours:
                     edge_color = "black"
                     edge_weight = 1
-                    if node.state == self.board[neighbour].state:
+                    if node.state == board[neighbour].state:
                         if node.state == HexCellState.PLAYER_ONE:
                             edge_color = "red"
                             edge_weight = 4
@@ -262,6 +266,20 @@ def construct_hex_board(board_size):
     return np.array(board)
 
 
+def hex_board_from_ohe(state, board_size):
+    board = []
+    index = 2
+    for i in range(board_size):
+        row = []
+        for j in range(board_size):
+            cell_neighbours = get_cell_neighbours(i, j, board_size)
+            cell_state = HexCellState.PLAYER_ONE if state[index] == 1 else HexCellState.PLAYER_TWO if state[index + 1] == 1 else HexCellState.EMPTY
+            row.append(HexCell(cell_neighbours, state=cell_state))
+            index += 2
+        board.append(row)
+    return np.array(board)
+
+
 def get_cell_neighbours(row, col, board_size):
     """
     Computes a list of neighbouring cells for the cell at the given row and column.
@@ -282,12 +300,12 @@ def get_cell_neighbours(row, col, board_size):
 
 if __name__ == '__main__':
     h = Hex(3)
-    h.get_initial_state()
+    s = h.get_initial_state()
     while not h.is_state_terminal():
         actions = h.get_legal_actions()
         print(actions)
         action_idx = np.random.choice(np.arange(0, len(actions)))
         action = actions[action_idx]
-        h.get_child_state(action)
-        h.visualize()
+        s = h.get_child_state(action)
+        h.visualize(s)
     print("Player {} won.".format("one" if h.state == HexState.PLAYER_ONE_WON else "two"))

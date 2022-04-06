@@ -1,6 +1,6 @@
 agent:
   anet:
-    weight_file: "rl/rl/models/anet_episode_299"
+    weight_file: "models/hex7/512relu_10000buf/anet_episode_250"
     optimizer: "adam"
     hidden_layers: [
       [ 512, "relu" ],
@@ -9,3 +9,4 @@ oht:
   token: ""
   qualify: false
   visualize: false
+  league: true

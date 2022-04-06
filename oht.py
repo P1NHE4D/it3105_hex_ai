@@ -10,7 +10,11 @@ def main():
         except YAMLError as exc:
             print(exc)
     client = OHTClient(config=config)
-    client.run()
+    try:
+        league = config["oht"]["league"]
+    except KeyError:
+        league = False
+    client.run(mode="league" if league else "qualifiers")
 
 
 if __name__ == '__main__':

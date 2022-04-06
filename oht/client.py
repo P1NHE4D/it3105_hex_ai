@@ -24,6 +24,7 @@ class OHTClient(ActorClient):
         self.agent_config = config.get("agent", {})
         self.visualize = oht_config.get("visualize", False)
         self.progress: tqdm = None
+        self.played_games = []
 
     def handle_series_start(
             self, unique_id, series_id, player_map, num_games, game_params
@@ -38,7 +39,7 @@ class OHTClient(ActorClient):
 
     def handle_get_action(self, state):
         actions = [i for i, cell in enumerate(state[1:]) if cell == 0]
-        encoded_state = self.encode_state(state)
+        encoded_state = self.encode_state(state, transpose=True)
         action_idx = self.agent.propose_action(encoded_state, actions)
         row, col = self.game.get_action(action_idx)
         return row, col
@@ -48,9 +49,7 @@ class OHTClient(ActorClient):
         self.progress.update(1)
 
     def handle_game_over(self, winner, end_state):
-        state = self.encode_state(end_state)
-        if self.visualize:
-            self.game.visualize(state)
+        self.played_games.append(end_state)
 
     def handle_series_over(self, stats):
         for stat in stats:
@@ -59,8 +58,12 @@ class OHTClient(ActorClient):
     def handle_tournament_over(self, score):
         print("Tournament score: {}".format(score))
         self.progress.close()
+        for state in self.played_games:
+            self.game.visualize(self.encode_state(state))
 
-    def encode_state(self, state):
+    def encode_state(self, state, transpose=False):
+        if transpose and state[0] == 2:
+            state = np.array(list(map(lambda x: 1 if x == 2 else 2 if x == 1 else 0, state)))
         encoded_state = np.zeros(2 + 2 * self.board_size ** 2)
         for i, cell in enumerate(state):
             if cell != 0:
