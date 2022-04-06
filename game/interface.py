@@ -4,9 +4,9 @@ from copy import deepcopy
 
 class Game(ABC):
     """
-    Abstraction which presents the ruleset of a 2-player game with deterministic actions as states, actions and rewards.
-    States are encoded as 1d numpy arrays of integers, and actions are encoded as integer indexes into the complete
-    list of all actions.
+    Abstraction which encapsulates a running (stateful) 2-player game with deterministic actions as states, actions and
+    rewards. States are encoded as 1d numpy arrays of integers, and actions are encoded as integer indexes into the
+    complete list of all actions.
     """
 
     def __init__(self, starting_player=0):
@@ -14,23 +14,29 @@ class Game(ABC):
         self.current_player = starting_player
 
     def create_copy(self):
+        """
+        Returns a deepcopy of the running game
+        """
         return deepcopy(self)
 
     @abstractmethod
     def get_initial_state(self):
         """
-        Initial state of a game
+        Resets the game to it's initial state, and returns this state
         """
         pass
 
     @abstractmethod
     def get_current_state(self):
+        """
+        Returns the current state of the game
+        """
         pass
 
     @abstractmethod
     def get_child_state(self, action):
         """
-        Resulting state when taking 'action' in 'state'
+        Take 'action' in the current state, returning the new state
         """
         pass
 
@@ -51,20 +57,20 @@ class Game(ABC):
     @abstractmethod
     def get_state_reward(self):
         """
-        Reward of the given state relative to the starting player (player 0)
+        Reward of the current state relative to the starting player (player 0)
         """
         pass
 
     def player_to_move(self):
         """
-        Returns for a state which player should make a move next
+        Returns which player should make a move next in the current state
         """
         return self.current_player
 
     @abstractmethod
     def next_player_to_move(self):
         """
-        Returns for a state which player should make a move after a move is taken
+        Returns which player should make a move after a move has been taken in the current state
         """
         pass
 
@@ -86,6 +92,6 @@ class Game(ABC):
 
     def visualize(self):
         """
-        Visualize state
+        Visualize current state
         """
         pass
