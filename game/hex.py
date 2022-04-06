@@ -30,25 +30,30 @@ class Hex(Game):
     Hex implementation. Uses the interface of Game, so refer to it's docstrings for API documentation
     """
 
-    def next_player_to_move(self):
-        return (self.current_player + 1) % 2
-
-    def number_of_actions(self):
-        return len(self.all_actions)
-
-    def get_action(self, index):
-        return self.all_actions[index]
-
-    def get_current_state(self):
-        return self.ohe_board
-
     def __init__(self, board_size):
+        """
+        :param board_size: size of the hex board
+        """
         super().__init__()
         self.board = construct_hex_board(board_size)
         self.ohe_board: list = []
         self.board_size = board_size
         self.all_actions = [(row, col) for row in range(self.board_size) for col in range(self.board_size)]
         self.state = HexState.UNDECIDED
+
+    def get_action(self, index):
+        """
+        Returns the action (row, col) at the given index
+        :param index: index of the action
+        :return: row, col of the action
+        """
+        return self.all_actions[index]
+
+    def get_current_state(self):
+        """
+        :return: the current state of the hex game
+        """
+        return self.ohe_board
 
     def get_initial_state(self):
         """
@@ -90,9 +95,6 @@ class Hex(Game):
         """
         return [i for i, (row, col) in enumerate(self.all_actions) if self.board[row][col].state == HexCellState.EMPTY]
 
-    def get_action_length(self):
-        return len(self.all_actions)
-
     def get_child_state(self, action):
         """
         Determines the child state based on the chosen action, returning
@@ -116,6 +118,12 @@ class Hex(Game):
         self.ohe_board[self.current_player] = 1
 
         return self.ohe_board
+
+    def next_player_to_move(self):
+        return (self.current_player + 1) % 2
+
+    def number_of_actions(self):
+        return len(self.all_actions)
 
     def update_game_state(self, row, col):
         """
@@ -151,7 +159,7 @@ class Hex(Game):
             for neighbour in self.board[row, col].neighbours:
                 neighbour_row, neighbour_col = neighbour
                 if self.board[neighbour_row, neighbour_col].state == cell_val and (
-                neighbour_row, neighbour_col) not in visited:
+                        neighbour_row, neighbour_col) not in visited:
                     lines = lines.union(connected_lines(neighbour_row, neighbour_col, visited))
 
             return lines

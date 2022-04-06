@@ -30,9 +30,11 @@ def configure_optimizer(optimizer, learning_rate):
 
 class ANET(Model):
 
-    def __init__(self, input_shape, hidden_layers, output_nodes, optimizer, learning_rate, weight_file, *args, **kwargs):
+    def __init__(self, input_shape, hidden_layers, output_nodes, optimizer, learning_rate, weight_file, *args,
+                 **kwargs):
         super().__init__(*args, **kwargs)
-        layers = [Dense(nodes, activation=activation if activation != "linear" else None) for nodes, activation in hidden_layers]
+        layers = [Dense(nodes, activation=activation if activation != "linear" else None) for nodes, activation in
+                  hidden_layers]
         layers.append(Dense(output_nodes, activation="softmax"))
         self.model = Sequential(layers)
         self.compile(
@@ -84,7 +86,8 @@ class Critic(Model):
 
     def __init__(self, input_shape, hidden_layers, optimizer, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        layers = [Dense(nodes, activation=activation if activation != "linear" else None) for nodes, activation in hidden_layers]
+        layers = [Dense(nodes, activation=activation if activation != "linear" else None) for nodes, activation in
+                  hidden_layers]
         layers.append(Dense(1, activation="tanh"))
         self.model = Sequential(layers)
         self.compile(

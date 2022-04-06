@@ -5,7 +5,7 @@ from rl.agent import Agent
 
 class UniformAgent(Agent):
     """
-    Agent which chooses proposes actions at random
+    Agent which picks random actions based on a uniform distribution
     """
 
     def propose_action(self, state, legal_actions):

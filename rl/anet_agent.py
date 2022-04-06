@@ -13,15 +13,18 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class ANETAgent(Agent):
-    """
-    Agent which chooses its action based on a trained ANET
-    """
 
     def __init__(
             self,
             game: Game,
             config=None
     ):
+        """
+        Agent which chooses its action based on a trained ANET
+
+        :param game: game instance
+        :param config: agent config
+        """
         if config is None:
             config = {}
         anet_config = config.get("anet", {})
@@ -81,7 +84,7 @@ class ANETAgent(Agent):
         rbuf_y = deque(maxlen=self.rbuf_size)
         cbuf_x = []
         cbuf_y = []
-        progress = tqdm(range(1, self.episodes+1), desc="(initial episode)")
+        progress = tqdm(range(1, self.episodes + 1), desc="(initial episode)")
         history = LossHistory()
 
         # save initial weights as episode 0
@@ -99,19 +102,31 @@ class ANETAgent(Agent):
                 sigma=self.sigma
             )
 
+            # plays the game using action distributions returned from the mcts tree
             state = self.game.get_initial_state()
             while not self.game.is_state_terminal():
+
+                # compute number of simulations if dynamic simulations is enabled
                 num_sim = self.num_sim
                 if self.dynamic_sim:
                     actions = self.game.get_legal_actions()
                     factor = 1 - (len(actions) / self.game.number_of_actions())
                     num_sim = max([round(factor * self.num_sim), self.min_sim])
+
+                # obtain an action distribution from mcts
                 distribution = self.mcts_tree.simulate(game=self.game, num_sim=num_sim)
+
+                # store the distribution and respective state for training
                 rbuf_x.append(np.copy(state))
                 rbuf_y.append(distribution)
+
+                # select the best action and advance the game
                 action = np.argmax(distribution)
                 state = self.game.get_child_state(action)
+
+                # append child state to the critic buffer for training
                 cbuf_x.append(np.copy(state))
+
                 self.mcts_tree.retain_subtree(action)
 
             if self.visualize_episode:
@@ -119,6 +134,7 @@ class ANETAgent(Agent):
 
             cbuf_y.extend(np.full(len(cbuf_x) - len(cbuf_y), fill_value=self.game.get_state_reward()))
 
+            # train ANET and critic
             if episode % self.fit_interval == 0 or episode == self.episodes:
                 self.anet.fit(x=np.array(rbuf_x), y=np.array(rbuf_y), batch_size=self.batch_size, epochs=self.epochs,
                               verbose=3, callbacks=[history])
@@ -131,11 +147,13 @@ class ANETAgent(Agent):
                 cbuf_x = []
                 cbuf_y = []
 
+            # store weight files
             if episode % self.save_interval == 0 or episode == self.episodes:
                 weight_file = f"{self.file_path}/anet_episode_{episode}"
                 self.anet.save_weights(filepath=weight_file)
                 weight_files.append(weight_file)
 
+            # update epsilon and sigma
             self.epsilon *= self.epsilon_decay
             if episode >= self.sigma_delay:
                 self.sigma *= self.sigma_decay
