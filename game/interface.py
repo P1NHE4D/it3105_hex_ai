@@ -90,7 +90,7 @@ class Game(ABC):
         """
         pass
 
-    def visualize(self):
+    def visualize(self, title):
         """
         Visualize current state
         """

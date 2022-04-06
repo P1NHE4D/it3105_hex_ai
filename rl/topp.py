@@ -9,10 +9,10 @@ from rl.anet_agent import ANETAgent
 from rl.uniform_agent import UniformAgent
 
 
-def play_game(game: Game, player_1: Agent, player_2: Agent, visualize=False):
+def play_game(game: Game, player_1: Agent, player_2: Agent, visualize=False, title=None):
     """
     Play game until completion, returning 1 if player 1 won, and 2 if player 2 won, and optionally visualizing the final
-    game state
+    game state (with an optional title)
     """
     state = game.get_initial_state()
     player_to_move = player_1
@@ -26,12 +26,17 @@ def play_game(game: Game, player_1: Agent, player_2: Agent, visualize=False):
         raise ValueError('Game ended in tie, but ties are not implemented for play_game')
 
     if visualize:
-        game.visualize()
+        game.visualize(title=title)
 
     return 1 if reward > 0 else 2
 
 
-def round_robin_tournament(game: Game, agents: list[tuple[str, Agent]], num_games_per_series: int, visualize=False):
+def round_robin_tournament(
+        game: Game,
+        agents: list[tuple[str, Agent]],
+        num_games_per_series: int,
+        num_games_to_visualize:int = 0
+):
     """
     Each agent competes with each other agent playing num_games_per_series games. Then the wins/losses statistics of
     each player is returned
@@ -46,15 +51,24 @@ def round_robin_tournament(game: Game, agents: list[tuple[str, Agent]], num_game
 
     with tqdm(total=total_num_games) as pbar:
         pbar.set_description("Playing tournament games")
+        series = 0
         for i, (a_name, a_agent) in enumerate(agents[:-1]):
+            series += 1
             for b_name, b_agent in agents[i+1:]:
                 for j in range(num_games_per_series):
                     pbar.update(1)
+                    should_visualize = j < num_games_to_visualize
                     # in an attempt to be fair, alternate being the first player
                     if j % 2 == 0:
-                        winner_name = a_name if play_game(game, a_agent, b_agent, visualize) == 1 else b_name
+                        title = (f"SERIES {series} GAME {j}\n"
+                                 f"PLAYER 1 (red): {a_name}\n"
+                                 f"PLAYER 2 (black): {b_name}")
+                        winner_name = a_name if play_game(game, a_agent, b_agent, should_visualize, title) == 1 else b_name
                     else:
-                        winner_name = b_name if play_game(game, b_agent, a_agent, visualize) == 1 else a_name
+                        title = (f"SERIES {series} GAME {j}\n"
+                                 f"PLAYER 1 (red): {b_name}\n"
+                                 f"PLAYER 2 (black): {a_name}")
+                        winner_name = b_name if play_game(game, b_agent, a_agent, should_visualize, title) == 1 else a_name
                     loser_name = a_name if winner_name == b_name else b_name
 
                     wins[winner_name] += 1
@@ -71,7 +85,7 @@ def anet_tournament(
         anet_configs: list[dict],
         num_games_per_series: int,
         include_uniform: bool,
-        visualize: bool = False,
+        num_games_to_visualize_per_series: int = 0,
 ):
     """
     Hold a game tournament of ANETAgents with weights loaded from provided weight files, optionally including a uniform
@@ -84,7 +98,7 @@ def anet_tournament(
     if include_uniform:
         named_agents.append(('uniform', UniformAgent()))
 
-    results = round_robin_tournament(game, named_agents, num_games_per_series, visualize)
+    results = round_robin_tournament(game, named_agents, num_games_per_series, num_games_to_visualize_per_series)
     for name, wins, losses in results:
         print(f"{name} WL-Ratio {wins / (wins + losses)}, WINS {wins} LOSSES {losses}")
 
@@ -114,5 +128,4 @@ if __name__ == '__main__':
         anet_configs=configs,
         num_games_per_series=25,
         include_uniform=True,
-        visualize=False,
     )

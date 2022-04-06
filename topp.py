@@ -27,6 +27,7 @@ def main():
     topp_config = config["topp"]
     topp_num_sample_games = topp_config["num_games_per_series"]
     topp_include_uniform = topp_config["include_uniform"]
+    topp_num_games_to_visualize_per_series = topp_config["num_games_to_visualize_per_series"]
     path = glob(topp_config["weight_path"].strip("/") + "/*.index")
     weight_files = [f.strip(".index") for f in path]
     configs = []
@@ -34,7 +35,7 @@ def main():
         cpy = deepcopy(agent_config)
         cpy['anet']['weight_file'] = weight_file
         configs.append(cpy)
-    anet_tournament(game, configs, topp_num_sample_games, topp_include_uniform)
+    anet_tournament(game, configs, topp_num_sample_games, topp_include_uniform, topp_num_games_to_visualize_per_series)
 
 
 if __name__ == '__main__':

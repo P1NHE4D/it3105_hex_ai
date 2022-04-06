@@ -89,7 +89,7 @@ class Nim(Game):
     def next_player_to_move(self):
         return (self.current_player + 1) % 2
 
-    def visualize(self):
+    def visualize(self, title):
         print(f"PLAYER {self.current_player} STONES {self.stones} MAX_TAKE {self.max_take} "
               f"REMAINING {self.remaining} OHE {self.ohe_state}")
 

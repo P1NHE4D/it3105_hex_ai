@@ -41,3 +41,4 @@ topp:
   # params irrelevant if enabled is false
   include_uniform: false
   num_games_per_series: 50
+  num_games_to_visualize_per_series: 2
