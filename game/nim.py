@@ -18,6 +18,8 @@ class Nim(Game):
 
         Player 0 and 1 receive 1.0 and -1.0 when winning, respectively. 0 wants to maximize, 1 wants to minimize
 
+        For detailed API docs, refer to the ABC.
+
         :param stones: number of stones on the board
         :param max_take: maximum number of stones a player can take on their turn
         :return:
@@ -87,7 +89,7 @@ class Nim(Game):
     def next_player_to_move(self):
         return (self.current_player + 1) % 2
 
-    def visualize(self):
+    def visualize(self, title):
         print(f"PLAYER {self.current_player} STONES {self.stones} MAX_TAKE {self.max_take} "
               f"REMAINING {self.remaining} OHE {self.ohe_state}")
 

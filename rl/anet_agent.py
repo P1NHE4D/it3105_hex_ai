@@ -40,6 +40,7 @@ class ANETAgent(Agent):
         self.fit_interval = config.get("fit_interval", 1)
         self.game = game
         self.anet = ANET(
+            input_shape=self.game.get_initial_state().shape,
             hidden_layers=anet_config.get("hidden_layers", [(32, "relu")]),
             output_nodes=game.number_of_actions(),
             optimizer=anet_config.get("optimizer", "adam"),
@@ -47,8 +48,6 @@ class ANETAgent(Agent):
             weight_file=anet_config.get("weight_file", None)
         )
         self.visualize_episode = config.get('visualize_episode', False)
-        # required construct LiteModel (informs self.anet of its input size)
-        self.anet.predict(np.array([self.game.get_initial_state()]))
         self.anet_lite: LiteModel = LiteModel.from_keras_model(self.anet)
 
         self.sigma = config.get("sigma", 1)
@@ -56,12 +55,12 @@ class ANETAgent(Agent):
         self.sigma_delay = config.get("sigma_delay", 20)
         critic_config = config.get("critic", {})
         self.critic = Critic(
+            input_shape=self.game.get_initial_state().shape,
             hidden_layers=critic_config.get("hidden_layers", [(32, "relu")]),
             optimizer=critic_config.get("optimizer", "adam"),
             learning_rate=critic_config.get("learning_rate", 0.01),
             weight_file=critic_config.get("weight_file", None)
         )
-        self.critic.predict(np.array([self.game.get_initial_state()]))
         self.critic_lite: LiteModel = LiteModel.from_keras_model(self.critic)
 
         default_policy_str = config.get('default_policy', "uniform")

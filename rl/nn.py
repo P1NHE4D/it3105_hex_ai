@@ -30,7 +30,7 @@ def configure_optimizer(optimizer, learning_rate):
 
 class ANET(Model):
 
-    def __init__(self, hidden_layers, output_nodes, optimizer, learning_rate, weight_file, *args, **kwargs):
+    def __init__(self, input_shape, hidden_layers, output_nodes, optimizer, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
         layers = [Dense(nodes, activation=activation if activation != "linear" else None) for nodes, activation in hidden_layers]
         layers.append(Dense(output_nodes, activation="softmax"))
@@ -43,6 +43,9 @@ class ANET(Model):
         if weight_file is not None:
             self.load_weights(weight_file)
             self.model_trained = True
+
+        # predict on a random sample to inform model of input size. Necessary to allow LiteModel to convert our model
+        self.predict(np.random.random((1, *input_shape)))
 
     def call(self, inputs, training=None, mask=None):
         return self.model(inputs)
@@ -79,7 +82,7 @@ class ANET(Model):
 
 class Critic(Model):
 
-    def __init__(self, hidden_layers, optimizer, learning_rate, weight_file, *args, **kwargs):
+    def __init__(self, input_shape, hidden_layers, optimizer, learning_rate, weight_file, *args, **kwargs):
         super().__init__(*args, **kwargs)
         layers = [Dense(nodes, activation=activation if activation != "linear" else None) for nodes, activation in hidden_layers]
         layers.append(Dense(1, activation="tanh"))
@@ -94,6 +97,9 @@ class Critic(Model):
             self.model_trained = True
         except Exception as e:
             print("Unable to load weight file", e)
+
+        # predict on a random sample to inform model of input size. Necessary to allow LiteModel to convert our model
+        self.predict(np.random.random((1, *input_shape)))
 
     def call(self, inputs, training=None, mask=None):
         return self.model(inputs)

@@ -3,6 +3,7 @@ from game.interface import Game
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 class HexCellState(Enum):
@@ -25,6 +26,9 @@ class HexCell:
 
 
 class Hex(Game):
+    """
+    Hex implementation. Uses the interface of Game, so refer to it's docstrings for API documentation
+    """
 
     def next_player_to_move(self):
         return (self.current_player + 1) % 2
@@ -167,7 +171,7 @@ class Hex(Game):
             return -1
         return 0
 
-    def visualize(self):
+    def visualize(self, title=None):
         g = nx.Graph()
         for row, hex_row in enumerate(self.board):
             for col, node in enumerate(hex_row):
@@ -199,6 +203,9 @@ class Hex(Game):
         node_edge_colors = nx.get_node_attributes(g, 'edge_color').values()
         edge_colors = nx.get_edge_attributes(g, 'color').values()
         edge_weights = nx.get_edge_attributes(g, 'weight').values()
+        if title is not None:
+            with mpl.rc_context({'figure.titlesize': 'medium'}):
+                plt.suptitle(title)
         nx.draw(
             g,
             edge_color=edge_colors,
