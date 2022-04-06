@@ -7,7 +7,8 @@ from game.interface import Game
 import numpy as np
 from collections import deque
 
-from rl.nn import LossHistory, ANET, Critic, LiteModel
+from rl.nn import LossHistory, ANET, Critic
+from rl.lite_model import LiteModel
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 

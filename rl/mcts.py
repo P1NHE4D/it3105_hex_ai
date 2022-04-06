@@ -1,7 +1,7 @@
 from pprint import pprint
 import numpy as np
 from game.interface import Game
-from rl.nn import LiteModel
+from rl.lite_model import LiteModel
 
 
 class MCTSNode:
