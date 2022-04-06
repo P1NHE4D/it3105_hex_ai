@@ -18,6 +18,8 @@ class Nim(Game):
 
         Player 0 and 1 receive 1.0 and -1.0 when winning, respectively. 0 wants to maximize, 1 wants to minimize
 
+        For detailed API docs, refer to the ABC.
+
         :param stones: number of stones on the board
         :param max_take: maximum number of stones a player can take on their turn
         :return:

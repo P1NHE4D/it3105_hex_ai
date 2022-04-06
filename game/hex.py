@@ -25,6 +25,9 @@ class HexCell:
 
 
 class Hex(Game):
+    """
+    Hex implementation. Uses the interface of Game, so refer to it's docstrings for API documentation
+    """
 
     def next_player_to_move(self):
         return (self.current_player + 1) % 2
