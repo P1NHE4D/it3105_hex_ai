@@ -138,6 +138,15 @@ class Critic(Model):
 
 
 class LiteModel:
+    """
+    Excluding this comment, this class was directly copied without modification from a IT3105 Blackboard thread titled
+    "Found way to speed up Tensorflow by ~30x" authored by Mathias Pettersen. That thread references
+    https://micwurm.medium.com/using-tensorflow-lite-to-speed-up-predictions-a3954886eb98
+
+    LiteModel provides a way to run small batches of predictions on a model more efficiently than by using the .predict
+    or the .__call__ methods of the model directly. This comes at the cost of having to create a LiteModel version of
+    the model any time it's weights are changed.
+    """
 
     @classmethod
     def from_file(cls, model_path):
