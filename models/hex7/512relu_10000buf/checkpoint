@@ -1,2 +1,2 @@
-model_checkpoint_path: "anet_episode_299"
-all_model_checkpoint_paths: "anet_episode_299"
+model_checkpoint_path: "anet_episode_0"
+all_model_checkpoint_paths: "anet_episode_0"
