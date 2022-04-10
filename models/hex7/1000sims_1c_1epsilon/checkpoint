@@ -1,0 +1,2 @@
+model_checkpoint_path: "anet_episode_350"
+all_model_checkpoint_paths: "anet_episode_350"

@@ -6,11 +6,11 @@ agent:
 game:
   name: "hex"
   params:
-    board_size: 5
+    board_size: 7
 topp:
   enabled: true
   # params irrelevant if enabled is false
-  include_uniform: false
+  include_uniform: true
   num_games_per_series: 50
-  weight_path: "models/hex5/512relu"
+  weight_path: "models/hex7/1000sims_1c_1epsilon"
   num_games_to_visualize_per_series: 2
