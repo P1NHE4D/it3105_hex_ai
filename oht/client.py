@@ -49,7 +49,8 @@ class OHTClient(ActorClient):
         self.progress.update(1)
 
     def handle_game_over(self, winner, end_state):
-        self.played_games.append(end_state)
+        if self.visualize:
+            self.played_games.append(end_state)
 
     def handle_series_over(self, stats):
         for stat in stats:
@@ -58,8 +59,9 @@ class OHTClient(ActorClient):
     def handle_tournament_over(self, score):
         print("Tournament score: {}".format(score))
         self.progress.close()
-        for state in self.played_games:
-            self.game.visualize(self.encode_state(state))
+        if self.visualize:
+            for state in self.played_games:
+                self.game.visualize(state=self.encode_state(state))
 
     def encode_state(self, state, transpose=False):
         if transpose and state[0] == 2:
